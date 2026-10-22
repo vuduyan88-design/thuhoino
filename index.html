@@ -1275,7 +1275,7 @@
       const bulkGroupUnit = document.getElementById('bulkGroupUnit');
 
       if (currentUser.role === 'ADMIN') {
-        headerTitle.innerHTML = `<b class="text-amber-400">TỔNG CÔNG TY (Layer 1)</b> | Toàn quyền điều hành toàn mạng lưới`;
+        headerTitle.innerHTML = `<b class="text-amber-400">TỔNG CÔNG TY</b> | Theo dõi, giám sát toàn trình mạng lưới`;
         adminToolbar.classList.remove('hidden');
         btnUnifiedAdmin.classList.remove('hidden');
         btnUnifiedAdmin.classList.add('flex');
@@ -1284,12 +1284,13 @@
         reportRankingSubtitle.innerText = "Thống kê so sánh toàn bộ các đơn vị trên toàn mạng lưới";
         colLoanRangeFilter.classList.remove('hidden');
 
-        bulkGroupTCT.classList.remove('hidden');
-        bulkGroupTCT.classList.add('flex');
+        // TCT chỉ theo dõi, ẩn các nút đổi trạng thái hàng loạt
+        bulkGroupTCT.classList.add('hidden');
+        bulkGroupTCT.classList.remove('flex');
         bulkGroupUnit.classList.add('hidden');
         bulkGroupUnit.classList.remove('flex');
       } else if (currentUser.role === 'OFFICER') {
-        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName} (Layer 2 - Chuyên quản)</b> | Phụ trách ${currentUser.assignedUnits.length} đơn vị`;
+        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName} (CQTCT)</b> | Điều hành đôn đốc ${currentUser.assignedUnits.length} đơn vị`;
         adminToolbar.classList.add('hidden');
         btnUnifiedAdmin.classList.add('hidden');
         btnUnifiedAdmin.classList.remove('flex');
@@ -1298,12 +1299,13 @@
         reportRankingSubtitle.innerText = `Thống kê trong phạm vi địa bàn chuyên quản phụ trách`;
         colLoanRangeFilter.classList.remove('hidden');
 
-        bulkGroupTCT.classList.add('hidden');
-        bulkGroupTCT.classList.remove('flex');
-        bulkGroupUnit.classList.remove('hidden');
-        bulkGroupUnit.classList.add('flex');
+        // CQTCT (Chuyên quản) có nút đổi trạng thái CQTCT gửi CQT
+        bulkGroupTCT.classList.remove('hidden');
+        bulkGroupTCT.classList.add('flex');
+        bulkGroupUnit.classList.add('hidden');
+        bulkGroupUnit.classList.remove('flex');
       } else {
-        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName} (Layer 3 - Đơn vị)</b> | Phân quyền tác nghiệp tỉnh`;
+        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName} (CQT)</b> | Đơn vị tiếp nhận & điều phối NVKD`;
         adminToolbar.classList.add('hidden');
         btnUnifiedAdmin.classList.add('hidden');
         btnUnifiedAdmin.classList.remove('flex');
@@ -1312,6 +1314,7 @@
         reportRankingSubtitle.innerText = `Báo cáo số liệu nội bộ đơn vị ${currentUser.unitName}`;
         colLoanRangeFilter.classList.add('hidden');
 
+        // CQT tỉnh có nút đổi trạng thái CQT và NVKD
         bulkGroupTCT.classList.add('hidden');
         bulkGroupTCT.classList.remove('flex');
         bulkGroupUnit.classList.remove('hidden');
@@ -1542,12 +1545,17 @@
         return;
       }
 
-      if (field === 'tctStatus' && currentUser.role !== 'ADMIN') {
-        alert("Chỉ tài khoản Tổng Công Ty mới có quyền cập nhật trạng thái CQTCT gửi CQT!");
+      // Kiểm tra quyền đổi trạng thái hàng loạt:
+      if (currentUser.role === 'ADMIN') {
+        alert("Tài khoản TCT đóng vai trò giám sát, theo dõi toàn trình. Không trực tiếp thay đổi trạng thái gửi!");
         return;
       }
-      if ((field === 'cqtStatus' || field === 'nvkdStatus') && currentUser.role === 'ADMIN') {
-        alert("Tổng Công Ty chỉ cập nhật trạng thái TCT gửi tới CQT. Không can thiệp đổi trạng thái CQT và NVKD thay cho cơ sở!");
+      if (field === 'tctStatus' && currentUser.role !== 'OFFICER') {
+        alert("Chỉ tài khoản Chuyên quản (CQTCT) mới có quyền cập nhật trạng thái CQTCT gửi CQT!");
+        return;
+      }
+      if ((field === 'cqtStatus' || field === 'nvkdStatus') && currentUser.role !== 'UNIT') {
+        alert("Chỉ tài khoản Đơn vị Bưu điện (CQT) mới có quyền cập nhật trạng thái CQT và NVKD!");
         return;
       }
 
@@ -1669,9 +1677,13 @@
         const isCQTSent = (isTCTSent && st.cqtStatus === 'DA_GUI');
         const isChecked = selectedContractIds.has(item.contractId);
 
-        const canEditTCT = (currentUser.role === 'ADMIN');
-        const canEditCQT = (currentUser.role === 'ADMIN') || isTCTSent;
-        const canEditNVKD = (currentUser.role === 'ADMIN') || isCQTSent;
+        // Phân quyền chuẩn xác theo vai trò:
+        // - CQTCT (Chuyên quản - OFFICER): Có quyền thao tác cột CQTCT (Đã gửi / Chưa gửi)
+        // - CQT (Đơn vị tỉnh - UNIT): Có quyền thao tác CQT khi CQTCT đã gửi, thao tác NVKD & Phản hồi khi CQT đã gửi
+        // - TCT (ADMIN): Chỉ theo dõi, giám sát toàn trình (Read-only), không can thiệp tác nghiệp gửi
+        const canEditCQTCT = (currentUser.role === 'OFFICER');
+        const canEditCQT = (currentUser.role === 'UNIT' && isTCTSent);
+        const canEditNVKD = (currentUser.role === 'UNIT' && isCQTSent);
 
         // Cập nhật lại bản tin nhắc nợ đảm bảo đầy đủ SĐT KH và theo đúng kịch bản cảnh báo số ngày nợ
         const currentReminder = buildReminderMessage(item.customerName, item.customerPhone, item.contractId, item.overdueDays, item.outstandingDue, item.staffName, item.staffCode, item.province);
@@ -1751,7 +1763,7 @@
                     <span>CQTCT:</span>
                     <span class="text-[8px] text-slate-400 font-normal truncate">${st.tctTime || ''}</span>
                   </div>
-                  <select ${!canEditTCT ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'tctStatus', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] ${isTCTSent ? 'text-emerald-700 font-bold border-emerald-400' : 'text-slate-600'}">
+                  <select ${!canEditCQTCT ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'tctStatus', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] ${isTCTSent ? 'text-emerald-700 font-bold border-emerald-400' : 'text-slate-600'}">
                     <option value="CHUA_GUI" ${st.tctStatus === 'CHUA_GUI' ? 'selected' : ''}>Chưa gửi</option>
                     <option value="DA_GUI" ${st.tctStatus === 'DA_GUI' ? 'selected' : ''}>✓ Đã gửi</option>
                   </select>
