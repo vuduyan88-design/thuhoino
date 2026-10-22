@@ -166,7 +166,7 @@
             <i class="fa-solid fa-list-check text-indigo-500"></i>
           </div>
           <div id="kpiTotalLoans" class="text-xl font-bold text-slate-800 mt-0.5">0</div>
-          <div id="kpiDoneProgress" class="text-[10px] text-emerald-600 font-medium">TCT gửi CQT: 0%</div>
+          <div id="kpiDoneProgress" class="text-[10px] text-emerald-600 font-medium">CQTCT gửi CQT: 0%</div>
         </div>
         <div class="bg-white p-2.5 rounded-xl border border-rose-200 bg-rose-50/20 shadow-sm">
           <div class="flex justify-between items-center text-rose-600 text-[10px] font-semibold uppercase">
@@ -242,8 +242,8 @@
             <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">TIẾN ĐỘ ĐÔN ĐỐC:</label>
             <select id="statusFilter" onchange="applyFilters()" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600">
               <option value="ALL">-- Tất cả tiến độ --</option>
-              <option value="TCT_CHUA">TCT: Chưa gửi CQT</option>
-              <option value="TCT_DA">TCT: Đã gửi CQT</option>
+              <option value="TCT_CHUA">CQCQTCT: Chưa gửi CQT</option>
+              <option value="TCT_DA">CQCQTCT: Đã gửi CQT</option>
               <option value="CQT_CHUA">CQT: Chưa gửi NVKD</option>
               <option value="CQT_DA">CQT: Đã gửi NVKD</option>
               <option value="NVKD_CHUA">NVKD: Chưa nhắn tin KH</option>
@@ -287,13 +287,13 @@
                 <i class="fa-solid fa-xmark text-rose-500"></i> Bỏ tick
               </button>
 
-              <!-- KHỐI DÀNH RIÊNG CHO TCT (Layer 1): Chỉ đổi trạng thái TCT gửi CQT -->
+              <!-- KHỐI DÀNH RIÊNG CHO TCT (Layer 1): Chỉ đổi trạng thái CQTCT gửi CQT -->
               <div id="bulkGroupTCT" class="flex items-center gap-1 border-l border-amber-300 pl-1">
                 <button onclick="applyBulkStatusUpdate('tctStatus', 'DA_GUI')" class="px-2 py-0.5 bg-indigo-700 hover:bg-indigo-800 text-white rounded text-[10px] font-semibold transition flex items-center gap-1" title="Đánh dấu TCT đã gửi cho các khoản đã tick">
-                  <i class="fa-solid fa-paper-plane text-[9px]"></i> TCT: Đã gửi
+                  <i class="fa-solid fa-paper-plane text-[9px]"></i> CQTCT: Đã gửi
                 </button>
                 <button onclick="applyBulkStatusUpdate('tctStatus', 'CHUA_GUI')" class="px-2 py-0.5 bg-slate-200 hover:bg-rose-100 text-slate-700 hover:text-rose-700 rounded text-[10px] font-semibold transition flex items-center gap-1" title="Đảo trạng thái TCT về Chưa gửi (khi tick nhầm)">
-                  <i class="fa-solid fa-rotate-left text-[9px]"></i> TCT: Chưa gửi
+                  <i class="fa-solid fa-rotate-left text-[9px]"></i> CQTCT: Chưa gửi
                 </button>
               </div>
 
@@ -496,10 +496,10 @@
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-        <!-- 1. TCT gửi CQT -->
+        <!-- 1. CQTCT gửi CQT -->
         <div class="bg-white p-3 rounded-xl border border-indigo-100 shadow-sm border-l-4 border-l-indigo-600">
           <div class="flex items-center justify-between text-indigo-950 font-bold text-xs mb-1.5">
-            <span>TCT GỬI CQT</span>
+            <span>CQTCT GỬI CQT</span>
             <i class="fa-solid fa-building-columns text-indigo-500"></i>
           </div>
           <div class="grid grid-cols-2 gap-2 text-center pt-1 border-t border-slate-100">
@@ -871,10 +871,27 @@
       <!-- TAB 3: CẤU HÌNH ONLINE FIREBASE -->
       <div id="adminModalViewOnline" class="hidden flex-1 overflow-y-auto custom-scroll py-3 space-y-3">
         <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-2.5 text-xs text-slate-600">
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">Firebase Realtime Database URL:</label>
-            <input type="text" id="firebaseDbUrl" placeholder="https://your-project-default-rtdb.firebaseio.com" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono focus:outline-indigo-600 focus:bg-white">
-            <span class="text-[10px] text-slate-400 mt-1 block">Ví dụ: <code class="text-indigo-600">https://vnpost-debt-default-rtdb.asia-southeast1.firebasedatabase.app/</code></span>
+          <div class="space-y-2">
+            <div class="bg-amber-50 p-2.5 rounded-lg border border-amber-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div>
+                <span class="text-[10px] text-amber-900 font-bold block">ĐƯỜNG LINK ONLINE CHUẨN ĐÃ CẤU HÌNH:</span>
+                <code class="text-xs font-bold text-indigo-700 font-mono select-all" id="officialOnlineUrl">https://thu-ho-f4950-default-rtdb.firebaseio.com</code>
+              </div>
+              <div class="flex gap-1.5 flex-wrap">
+                <button onclick="copyAndFillOnlineUrl()" class="px-2.5 py-1 bg-white hover:bg-slate-100 text-indigo-800 border border-indigo-300 rounded text-xs font-bold shadow-sm flex items-center gap-1 transition">
+                  <i class="fa-solid fa-copy text-indigo-600"></i> Copy & Dán vào ô
+                </button>
+                <button onclick="activateOnlineWorkingNow()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold shadow flex items-center gap-1 transition">
+                  <i class="fa-solid fa-bolt text-amber-300"></i> Kích hoạt Làm việc trực tuyến
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Firebase Realtime Database URL:</label>
+              <input type="text" id="firebaseDbUrl" placeholder="https://thu-ho-f4950-default-rtdb.firebaseio.com" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono focus:outline-indigo-600 focus:bg-white font-bold text-indigo-900">
+              <span class="text-[10px] text-slate-400 mt-0.5 block">Hệ thống đã tự động gán đường link trực tuyến mặc định. Bạn chỉ cần bấm <b>Lưu & Tải file index.html mới</b> để triển khai cho toàn mạng lưới.</span>
+            </div>
           </div>
 
           <div class="bg-indigo-50 p-2.5 rounded-lg border border-indigo-200 text-indigo-950 text-[11px] space-y-1">
@@ -1010,8 +1027,8 @@
       { id: "CQ4", name: "Chuyên quản 4", assignedUnits: ["70000", "96000", "94000", "71000", "92000", "91000", "73000", "93000", "85000", "84000", "74000", "72000", "78000", "79000", "86000", "87000", "76000", "80000"] }
     ];
 
-    const STORAGE_KEY_AUTH = "VNPOST_AUTH_ACCOUNTS_V6";
-    const STORAGE_KEY_OFFICER_AUTH = "VNPOST_OFFICER_ACCOUNTS_V6";
+    const STORAGE_KEY_AUTH = "VNPOST_AUTH_ACCOUNTS_V7";
+    const STORAGE_KEY_OFFICER_AUTH = "VNPOST_OFFICER_ACCOUNTS_V7";
     const STORAGE_KEY_DATA = "VNPOST_ACTIVE_DATASET_V6";
     const STORAGE_KEY_SETTLED = "VNPOST_SETTLED_LIST_V6";
     const STORAGE_KEY_META = "VNPOST_METADATA_V6";
@@ -1027,29 +1044,15 @@
       return `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')} ${now.getDate()}/${now.getMonth() + 1}`;
     }
 
-    // ==================== BẢN TIN NHẮC NỢ CĂN CỨ VÀO SỐ LẦN NHẮC NỢ VÀ SỐ NGÀY QUÁ HẠN ====================
+        // ==================== YÊU CẦU 4: BẢN TIN NHẮC NỢ LỊCH SỰ, ĐỒNG HÀNH (BƯU ĐIỆN HỖ TRỢ THANH TOÁN ĐẾN HẠN) ====================
     function buildReminderMessage(customerName, customerPhone, contractId, overdueDays, outstandingDue, staffName, staffCode, province, reminderCount = 1) {
-      const contactInfo = (staffName && staffCode) ? `Đ/c ${staffName} - NVKD (SĐT: ${staffCode})` : (staffCode ? `NVKD phụ trách (SĐT: ${staffCode})` : `Cán bộ chuyên quản ${province}`);
-      const phoneDisplay = customerPhone ? ` (SĐT: ${customerPhone})` : ' (Chưa có SĐT)';
+      const contactInfo = (staffName && staffCode) ? `Đ/c ${staffName} - NVKD (SĐT: ${staffCode})` : (staffCode ? `NVKD phụ trách (SĐT: ${staffCode})` : `Bưu điện ${province}`);
+      const phoneDisplay = customerPhone ? ` (SĐT: ${customerPhone})` : '';
       const dueFormatted = formatVND(outstandingDue);
-      const count = parseInt(reminderCount) || 1;
+      const daysText = overdueDays > 0 ? `quá hạn ${overdueDays} ngày` : 'đến hạn thanh toán';
+      const reminderCountText = reminderCount > 1 ? ` (lần ${reminderCount})` : '';
 
-      // KỊCH BẢN 1: Đôn đốc lần 1 và quá hạn <= 10 ngày (Nhắc nhở nhẹ nhàng, đồng hành)
-      if (count === 1 && overdueDays <= 10) {
-        return `[BƯU ĐIỆN VIỆT NAM - THÔNG BÁO NHẮC NỢ LẦN 1] Kính gửi Quý khách ${customerName}${phoneDisplay}, HĐ vay số ${contractId} hiện đã quá hạn ${overdueDays} ngày. Số tiền cần thanh toán là: ${dueFormatted}. Quý khách vui lòng nộp tiền sớm để duy trì lịch sử tín dụng tốt và tránh phát sinh phí chậm nộp. Chi tiết liên hệ: ${contactInfo}. Trân trọng!`;
-      }
-      // KỊCH BẢN 2: Đôn đốc lần 2 hoặc quá hạn <= 30 ngày (Đôn đốc nghiêm túc, cảnh báo tính lãi phạt & ảnh hưởng CIC)
-      else if (count === 2 || (count < 3 && overdueDays <= 30)) {
-        return `[BƯU ĐIỆN VIỆT NAM - ĐÔN ĐỐC NỢ QUÁ HẠN LẦN ${count}] Kính gửi Quý khách ${customerName}${phoneDisplay}, HĐ vay số ${contractId} đã quá hạn ${overdueDays} ngày. Đây là thông báo nhắc nợ lần thứ ${count}. Số tiền quá hạn cần tất toán ngay: ${dueFormatted}. Khoản nợ đang phát sinh lãi phạt dồn tích mỗi ngày và chuẩn bị ghi nhận nợ cần chú ý trên CIC. Yêu cầu Quý khách thanh toán dứt điểm ngay hôm nay. Hỗ trợ liên hệ: ${contactInfo}.`;
-      }
-      // KỊCH BẢN 3: Đôn đốc lần 3 hoặc quá hạn 31 - 90 ngày (Cảnh báo nợ xấu Nhóm 2 - 3, khóa tín dụng, chuyển tổ thu nợ)
-      else if (count === 3 || (count < 4 && overdueDays <= 90)) {
-        return `[BƯU ĐIỆN VIỆT NAM - CẢNH BÁO NỢ XẤU LẦN ${count}] Kính gửi Quý khách ${customerName}${phoneDisplay}, Bưu điện Việt Nam đã đôn đốc ${count} lần nhưng HĐ vay số ${contractId} vẫn chưa được thanh toán (đã quá hạn ${overdueDays} ngày, số tiền: ${dueFormatted}). Hồ sơ của Quý khách đang bị phân loại nợ xấu (Nhóm 2 - Nhóm 3) trên toàn hệ thống ngân hàng CIC và chuyển Tổ thu hồi nợ trực tiếp tại địa bàn. Yêu cầu Quý khách thanh toán dứt điểm trước 17h00. Đầu mối tiếp nhận: ${contactInfo}.`;
-      }
-      // KỊCH BẢN 4: Đôn đốc lần 4 trở lên hoặc quá hạn > 90 ngày (Răn đe pháp lý nghiêm khắc, khởi kiện Tòa án, phối hợp chính quyền)
-      else {
-        return `[BƯU ĐIỆN VIỆT NAM - THÔNG BÁO KHỞI KIỆN & XỬ LÝ PHÁP LÝ (LẦN ${count})] Kính gửi Quý khách ${customerName}${phoneDisplay}, sau ${count} lần đôn đốc bất thành, HĐ số ${contractId} đã quá hạn ${overdueDays} ngày không thanh toán với số tiền: ${dueFormatted}. Do Quý khách trốn tránh nghĩa vụ trả nợ, Bưu điện Việt Nam đang hoàn tất hồ sơ chuyển Tòa án có thẩm quyền thụ lý khởi kiện, đồng thời gửi công văn về địa phương và nơi công tác để phong tỏa thu hồi tài sản theo luật định. Liên hệ giải quyết khẩn cấp: ${contactInfo}.`;
-      }
+      return `[BƯU ĐIỆN VIỆT NAM THÔNG BÁO] Kính gửi Quý khách ${customerName}${phoneDisplay}, khoản vay theo HĐ số ${contractId} hiện đã ${daysText}${reminderCountText}. Số tiền cần thanh toán là: ${dueFormatted}. Quý khách vui lòng thu xếp thanh toán để đảm bảo quyền lợi tín dụng. Chi tiết hỗ trợ liên hệ: ${contactInfo}. Trân trọng cảm ơn!`;
     }
 
     // TÀI KHOẢN VÀ PHÂN QUYỀN
@@ -1064,7 +1067,7 @@
 
       UNIT_DEFINITIONS.forEach(u => {
         if (!accounts[u.code]) {
-          accounts[u.code] = { role: "UNIT", unitCode: u.code, unitName: u.name, password: generate6DigitCode() };
+          accounts[u.code] = { role: "UNIT", unitCode: u.code, unitName: u.name, password: "123456" };
           changed = true;
         }
       });
@@ -1083,7 +1086,7 @@
           offAccounts[uName] = {
             officerId: off.id,
             officerName: off.name,
-            password: generate6DigitCode()
+            password: "123456"
           };
           changed = true;
         }
@@ -1115,7 +1118,7 @@
     }
 
     // FIREBASE SYNC
-    const EMBEDDED_FIREBASE_URL = "";
+    const EMBEDDED_FIREBASE_URL = "https://thu-ho-f4950-default-rtdb.firebaseio.com";
 
     function getActiveFirebaseUrl() {
       const stored = localStorage.getItem(STORAGE_KEY_FB_URL);
@@ -1489,7 +1492,7 @@
       document.getElementById('kpiTotalDue').innerText = formatVND(totalDue);
       document.getElementById('kpiTotalOutstanding').innerText = formatVND(totalOutstanding);
       document.getElementById('kpiAvgDays').innerText = `${avgDays} ngày`;
-      document.getElementById('kpiDoneProgress').innerText = `TCT gửi CQT: ${tctDoneCount}/${totalLoans} (${tctPercent}%)`;
+      document.getElementById('kpiDoneProgress').innerText = `CQTCT gửi CQT: ${tctDoneCount}/${totalLoans} (${tctPercent}%)`;
       document.getElementById('kpiFeedbackRisk').innerText = `Rủi ro cao: ${riskFeedbackCount} khoản`;
 
       document.getElementById('filteredCount').innerText = totalLoans.toLocaleString('vi-VN');
@@ -1540,7 +1543,7 @@
       }
 
       if (field === 'tctStatus' && currentUser.role !== 'ADMIN') {
-        alert("Chỉ tài khoản Tổng Công Ty mới có quyền cập nhật trạng thái TCT gửi CQT!");
+        alert("Chỉ tài khoản Tổng Công Ty mới có quyền cập nhật trạng thái CQTCT gửi CQT!");
         return;
       }
       if ((field === 'cqtStatus' || field === 'nvkdStatus') && currentUser.role === 'ADMIN') {
@@ -1745,7 +1748,7 @@
               <div class="grid grid-cols-3 gap-1 text-[9px]">
                 <div>
                   <div class="flex items-center justify-between font-bold text-indigo-950 mb-0.5">
-                    <span>TCT:</span>
+                    <span>CQTCT:</span>
                     <span class="text-[8px] text-slate-400 font-normal truncate">${st.tctTime || ''}</span>
                   </div>
                   <select ${!canEditTCT ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'tctStatus', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] ${isTCTSent ? 'text-emerald-700 font-bold border-emerald-400' : 'text-slate-600'}">
@@ -2572,8 +2575,8 @@
         "Tên Bưu điện tỉnh / TP": u.name,
         "Tổng số khoản nợ": u.totalLoans,
         "Tổng tiền cần thu (VNĐ)": u.totalDue,
-        [`TCT gửi CQT (Hôm nay ${strToday})`]: u.tctToday,
-        [`TCT gửi CQT (Hôm qua ${strYesterday})`]: u.tctYesterday,
+        [`CQCQTCT gửi CQT (Hôm nay ${strToday})`]: u.tctToday,
+        [`CQCQTCT gửi CQT (Hôm qua ${strYesterday})`]: u.tctYesterday,
         [`CQT gửi NVKD (Hôm nay ${strToday})`]: u.cqtToday,
         [`CQT gửi NVKD (Hôm qua ${strYesterday})`]: u.cqtYesterday,
         [`NVKD nhắn tin KH (Hôm nay ${strToday})`]: u.nvkdToday,
@@ -2674,7 +2677,7 @@
 
       officerList.forEach((off, idx) => {
         const uName = off.id.toLowerCase();
-        const acc = offAccounts[uName] || { password: generate6DigitCode() };
+        const acc = offAccounts[uName] || { password: "123456" };
 
         let unitsCheckboxesHtml = '';
         UNIT_DEFINITIONS.forEach(u => {
@@ -2788,7 +2791,7 @@
 
       UNIT_DEFINITIONS.forEach(u => {
         if (filterText && !u.name.toLowerCase().includes(filterText) && !u.code.includes(filterText)) return;
-        const acc = accounts[u.code] || { password: generate6DigitCode() };
+        const acc = accounts[u.code] || { password: "123456" };
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50";
         tr.innerHTML = `
@@ -2859,6 +2862,25 @@
     }
 
     // TÍCH HỢP TAB 3: CẤU HÌNH ONLINE FIREBASE
+    
+    function copyAndFillOnlineUrl() {
+      const url = "https://thu-ho-f4950-default-rtdb.firebaseio.com";
+      document.getElementById('firebaseDbUrl').value = url;
+      navigator.clipboard.writeText(url).then(() => {
+        showToast("Đã copy và dán đường link Online vào ô!");
+      });
+    }
+
+    function activateOnlineWorkingNow() {
+      const url = "https://thu-ho-f4950-default-rtdb.firebaseio.com";
+      document.getElementById('firebaseDbUrl').value = url;
+      localStorage.setItem(STORAGE_KEY_FB_URL, url);
+      showToast("Đang kích hoạt chế độ làm việc trực tuyến...");
+      setTimeout(() => {
+        location.reload();
+      }, 1000);
+    }
+
     function saveFirebaseConfigLocal() {
       const url = document.getElementById('firebaseDbUrl').value.trim();
       if (url) {
