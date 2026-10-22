@@ -4,1603 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hệ Thống Quản Lý & Điều Hành Thu Hồi Nợ TCT - Trực Tuyến</title>
-  <script src="https://cdn.tailwindcss.com">
-    // ==================== QUẢN LÝ TIẾN ĐỘ ĐÔN ĐỐC & PHẢN HỒI KH THEO NGÀY ====================
-    function getDateString(d) {
-      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-    }
-
-    function getShortDateString(d) {
-      return `${d.getDate()}/${d.getMonth() + 1}`;
-    }
-
-    // Kiểm tra xem chuỗi thời gian (timeStr) có khớp với ngày target hay không
-    function matchDateInTimeString(timeStr, targetDate) {
-      if (!timeStr) return false;
-      const fullDateStr = getDateString(targetDate);     // ví dụ: "21/10/2026"
-      const shortDateStr = getShortDateString(targetDate); // ví dụ: "21/10"
-      return timeStr.includes(fullDateStr) || timeStr.includes(shortDateStr);
-    }
-
-    function renderDailyRemindersManagement() {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-
-      const strToday = getDateString(today);
-      const strYesterday = getDateString(yesterday);
-
-      document.getElementById('lblTodayDate').innerText = strToday;
-      document.getElementById('lblYesterdayDate').innerText = strYesterday;
-
-      // Dataset dùng để tổng hợp: Nếu là Admin TCT -> Toàn quốc. Nếu là Đơn vị -> Chỉ phạm vi đơn vị
-      const dataset = (currentUser && currentUser.role === 'ADMIN') ? rawDataset : rawDataset.filter(d => {
-        return d.province.includes(currentUser.unitName) || currentUser.unitName.includes(d.province) || (currentUser.unitCode && d.unitCode === currentUser.unitCode);
-      });
-
-      // 1. Tính toán số lần gửi Hôm nay vs Hôm qua của 3 tầng
-      let tctToday = 0, tctYesterday = 0;
-      let cqtToday = 0, cqtYesterday = 0;
-      let nvkdToday = 0, nvkdYesterday = 0;
-
-      // Cơ cấu phản hồi của khách hàng
-      const feedbackCounts = {
-        'HEN_TRA': 0,
-        'DA_TRA': 0,
-        'KHONG_NGHE': 0,
-        'DOI_SO': 0,
-        'TIEU_CUC': 0,
-        'CHUA_LIEN_HE': 0,
-        'KHAC': 0
-      };
-
-      // Thống kê theo từng đơn vị
-      const unitMap = {};
-      const unitsList = (currentUser && currentUser.role === 'ADMIN') ? UNIT_DEFINITIONS : UNIT_DEFINITIONS.filter(u => u.code === currentUser.unitCode || u.name === currentUser.unitName);
-      unitsList.forEach(u => {
-        unitMap[u.name] = {
-          name: u.name,
-          code: u.code,
-          totalLoans: 0,
-          tctToday: 0,
-          tctYesterday: 0,
-          cqtToday: 0,
-          cqtYesterday: 0,
-          nvkdToday: 0,
-          nvkdYesterday: 0,
-          positiveCount: 0, // Hẹn trả + Đã trả
-          riskCount: 0       // Đổi số + Tiêu cực
-        };
-      });
-
-      dataset.forEach(item => {
-        const st = item.status;
-        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
-        const unitKey = u ? u.name : item.province;
-        if (!unitMap[unitKey]) {
-          unitMap[unitKey] = {
-            name: unitKey,
-            code: item.unitCode || "---",
-            totalLoans: 0,
-            tctToday: 0,
-            tctYesterday: 0,
-            cqtToday: 0,
-            cqtYesterday: 0,
-            nvkdToday: 0,
-            nvkdYesterday: 0,
-            positiveCount: 0,
-            riskCount: 0
-          };
-        }
-        unitMap[unitKey].totalLoans++;
-
-        // Kiểm tra layer TCT
-        if (st.tctStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.tctTime, today)) {
-            tctToday++;
-            unitMap[unitKey].tctToday++;
-          } else if (matchDateInTimeString(st.tctTime, yesterday)) {
-            tctYesterday++;
-            unitMap[unitKey].tctYesterday++;
-          } else if (!st.tctTime) {
-            // Nếu không ghi mốc giờ, tính tạm vào ngày hiện tại
-            tctToday++;
-            unitMap[unitKey].tctToday++;
-          }
-        }
-
-        // Kiểm tra layer CQT
-        if (st.cqtStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.cqtTime, today)) {
-            cqtToday++;
-            unitMap[unitKey].cqtToday++;
-          } else if (matchDateInTimeString(st.cqtTime, yesterday)) {
-            cqtYesterday++;
-            unitMap[unitKey].cqtYesterday++;
-          }
-        }
-
-        // Kiểm tra layer NVKD
-        if (st.nvkdStatus === 'DA_NHAN') {
-          if (matchDateInTimeString(st.nvkdTime, today)) {
-            nvkdToday++;
-            unitMap[unitKey].nvkdToday++;
-          } else if (matchDateInTimeString(st.nvkdTime, yesterday)) {
-            nvkdYesterday++;
-            unitMap[unitKey].nvkdYesterday++;
-          }
-        }
-
-        // Phản hồi khách hàng
-        const fb = st.feedback || 'CHUA_LIEN_HE';
-        if (feedbackCounts[fb] !== undefined) feedbackCounts[fb]++;
-        else feedbackCounts['KHAC'] = (feedbackCounts['KHAC'] || 0) + 1;
-
-        if (fb === 'HEN_TRA' || fb === 'DA_TRA') unitMap[unitKey].positiveCount++;
-        if (fb === 'DOI_SO' || fb === 'TIEU_CUC') unitMap[unitKey].riskCount++;
-      });
-
-      // Render số liệu 3 cấp lên thẻ KPI
-      document.getElementById('statTctToday').innerText = tctToday.toLocaleString('vi-VN');
-      document.getElementById('statTctYesterday').innerText = tctYesterday.toLocaleString('vi-VN');
-      const diffTctVal = tctToday - tctYesterday;
-      document.getElementById('diffTct').innerText = (diffTctVal >= 0 ? `+${diffTctVal}` : `${diffTctVal}`);
-      document.getElementById('diffTct').className = diffTctVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-      document.getElementById('statCqtToday').innerText = cqtToday.toLocaleString('vi-VN');
-      document.getElementById('statCqtYesterday').innerText = cqtYesterday.toLocaleString('vi-VN');
-      const diffCqtVal = cqtToday - cqtYesterday;
-      document.getElementById('diffCqt').innerText = (diffCqtVal >= 0 ? `+${diffCqtVal}` : `${diffCqtVal}`);
-      document.getElementById('diffCqt').className = diffCqtVal >= 0 ? "text-blue-600 font-bold" : "text-rose-600 font-bold";
-
-      document.getElementById('statNvkdToday').innerText = nvkdToday.toLocaleString('vi-VN');
-      document.getElementById('statNvkdYesterday').innerText = nvkdYesterday.toLocaleString('vi-VN');
-      const diffNvkdVal = nvkdToday - nvkdYesterday;
-      document.getElementById('diffNvkd').innerText = (diffNvkdVal >= 0 ? `+${diffNvkdVal}` : `${diffNvkdVal}`);
-      document.getElementById('diffNvkd').className = diffNvkdVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-      // Render cơ cấu phản hồi KH
-      const totalDataset = dataset.length || 1;
-      ['HEN_TRA', 'DA_TRA', 'KHONG_NGHE', 'DOI_SO', 'TIEU_CUC', 'CHUA_LIEN_HE'].forEach(key => {
-        const cnt = feedbackCounts[key] || 0;
-        const pct = Math.round((cnt / totalDataset) * 100);
-        const countEl = document.getElementById(`fbCount_${key}`);
-        const pctEl = document.getElementById(`fbPct_${key}`);
-        if (countEl) countEl.innerText = cnt.toLocaleString('vi-VN');
-        if (pctEl) pctEl.innerText = `${pct}%`;
-      });
-
-      // Render bảng chi tiết từng đơn vị
-      const tbody = document.getElementById('dailyRemindersTableBody');
-      tbody.innerHTML = '';
-      const listUnits = Object.values(unitMap).sort((a, b) => b.nvkdToday - a.nvkdToday || b.totalLoans - a.totalLoans);
-
-      listUnits.forEach((u, idx) => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition border-b border-slate-100 text-[11px]";
-        tr.innerHTML = `
-          <td class="p-1.5 text-center text-slate-400 font-medium">${idx + 1}</td>
-          <td class="p-1.5 truncate">
-            <span class="font-bold text-slate-800">${u.name}</span>
-            <span class="text-[9px] text-slate-400 font-mono ml-1">(${u.code})</span>
-          </td>
-          <td class="p-1.5 text-center font-bold">${u.totalLoans}</td>
-          <td class="p-1.5 text-center bg-indigo-50/30">
-            <span class="font-bold text-indigo-700">${u.tctToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.tctYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center bg-blue-50/30">
-            <span class="font-bold text-blue-700">${u.cqtToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.cqtYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center bg-emerald-50/30">
-            <span class="font-bold text-emerald-700">${u.nvkdToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.nvkdYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center font-semibold text-emerald-700">
-            ${u.positiveCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.positiveCount / u.totalLoans)*100) : 0}%)</span>
-          </td>
-          <td class="p-1.5 text-center font-semibold text-rose-700">
-            ${u.riskCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.riskCount / u.totalLoans)*100) : 0}%)</span>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // XUẤT EXCEL BÁO CÁO ĐÔN ĐỐC TOÀN QUỐC HÀNG NGÀY (HÔM NAY VS HÔM QUA)
-    function exportDailyRemindersReportExcel() {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-      const strToday = getDateString(today);
-      const strYesterday = getDateString(yesterday);
-
-      // Sheet 1: Tổng hợp theo từng đơn vị
-      const unitMap = {};
-      UNIT_DEFINITIONS.forEach(u => {
-        unitMap[u.name] = {
-          name: u.name,
-          code: u.code,
-          totalLoans: 0,
-          totalDue: 0,
-          tctToday: 0,
-          tctYesterday: 0,
-          cqtToday: 0,
-          cqtYesterday: 0,
-          nvkdToday: 0,
-          nvkdYesterday: 0,
-          henTra: 0,
-          daTra: 0,
-          thueBao: 0,
-          doiSo: 0,
-          tieuCuc: 0,
-          chuaPhanHoi: 0
-        };
-      });
-
-      rawDataset.forEach(item => {
-        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
-        const k = u ? u.name : item.province;
-        if (!unitMap[k]) {
-          unitMap[k] = { name: k, code: item.unitCode || "---", totalLoans: 0, totalDue: 0, tctToday: 0, tctYesterday: 0, cqtToday: 0, cqtYesterday: 0, nvkdToday: 0, nvkdYesterday: 0, henTra: 0, daTra: 0, thueBao: 0, doiSo: 0, tieuCuc: 0, chuaPhanHoi: 0 };
-        }
-        unitMap[k].totalLoans++;
-        unitMap[k].totalDue += (item.outstandingDue || 0);
-
-        const st = item.status;
-        if (st.tctStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.tctTime, today) || !st.tctTime) unitMap[k].tctToday++;
-          else if (matchDateInTimeString(st.tctTime, yesterday)) unitMap[k].tctYesterday++;
-        }
-        if (st.cqtStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.cqtTime, today)) unitMap[k].cqtToday++;
-          else if (matchDateInTimeString(st.cqtTime, yesterday)) unitMap[k].cqtYesterday++;
-        }
-        if (st.nvkdStatus === 'DA_NHAN') {
-          if (matchDateInTimeString(st.nvkdTime, today)) unitMap[k].nvkdToday++;
-          else if (matchDateInTimeString(st.nvkdTime, yesterday)) unitMap[k].nvkdYesterday++;
-        }
-
-        const fb = st.feedback;
-        if (fb === 'HEN_TRA') unitMap[k].henTra++;
-        else if (fb === 'DA_TRA') unitMap[k].daTra++;
-        else if (fb === 'KHONG_NGHE') unitMap[k].thueBao++;
-        else if (fb === 'DOI_SO') unitMap[k].doiSo++;
-        else if (fb === 'TIEU_CUC') unitMap[k].tieuCuc++;
-        else unitMap[k].chuaPhanHoi++;
-      });
-
-      const summaryData = Object.values(unitMap).map((u, i) => ({
-        "STT": i + 1,
-        "Mã bưu điện": u.code,
-        "Tên Bưu điện tỉnh / TP": u.name,
-        "Tổng số khoản nợ": u.totalLoans,
-        "Tổng tiền cần thu (VNĐ)": u.totalDue,
-        [`TCT gửi CQT (Hôm nay ${strToday})`]: u.tctToday,
-        [`TCT gửi CQT (Hôm qua ${strYesterday})`]: u.tctYesterday,
-        [`CQT gửi NVKD (Hôm nay ${strToday})`]: u.cqtToday,
-        [`CQT gửi NVKD (Hôm qua ${strYesterday})`]: u.cqtYesterday,
-        [`NVKD nhắn tin KH (Hôm nay ${strToday})`]: u.nvkdToday,
-        [`NVKD nhắn tin KH (Hôm qua ${strYesterday})`]: u.nvkdYesterday,
-        "Khách hẹn ngày trả": u.henTra,
-        "Khách đã nộp / Tra soát": u.daTra,
-        "Thuê bao / Không nghe": u.thueBao,
-        "Khách đã đổi số ĐT": u.doiSo,
-        "Khách thách thức / Thóa mạ": u.tieuCuc,
-        "Chưa có phản hồi": u.chuaPhanHoi
-      }));
-
-      // Sheet 2: Danh sách chi tiết các khoản nợ có phản hồi của khách hàng
-      const detailFeedbackData = rawDataset.filter(d => d.status.feedback !== 'CHUA_LIEN_HE').map((d, idx) => ({
-        "STT": idx + 1,
-        "Đơn vị": d.province,
-        "Mã hợp đồng": d.contractId,
-        "Tên khách hàng": d.customerName,
-        "SĐT khách hàng": d.customerPhone,
-        "Tiền cần thu (VNĐ)": d.outstandingDue,
-        "Số ngày quá hạn": d.overdueDays,
-        "NVKD phụ trách": d.staffName,
-        "SĐT NVKD": d.staffCode,
-        "Thời gian NVKD gửi tin": d.status.nvkdTime || "",
-        "Phản hồi từ khách hàng": d.status.feedback,
-        "Ghi chú chi tiết trao đổi": d.status.note || "",
-        "Cập nhật lần cuối": d.status.lastUpdated || ""
-      }));
-
-      const wb = XLSX.utils.book_new();
-      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, wsSummary, "Tong_Hop_Don_Doc_3_Cap");
-
-      const wsDetail = XLSX.utils.json_to_sheet(detailFeedbackData);
-      XLSX.utils.book_append_sheet(wb, wsDetail, "Chi_Tiet_Phan_Hoi_KH");
-
-      XLSX.writeFile(wb, `Bao_Cao_Don_Doc_Va_Phan_Hoi_KH_${new Date().toISOString().slice(0, 10)}.xlsx`);
-      showToast("Đã xuất báo cáo đôn đốc toàn quốc thành công!");
-    }
-
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js">
-    // ==================== QUẢN LÝ TIẾN ĐỘ ĐÔN ĐỐC & PHẢN HỒI KH THEO NGÀY ====================
-    function getDateString(d) {
-      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-    }
-
-    function getShortDateString(d) {
-      return `${d.getDate()}/${d.getMonth() + 1}`;
-    }
-
-    // Kiểm tra xem chuỗi thời gian (timeStr) có khớp với ngày target hay không
-    function matchDateInTimeString(timeStr, targetDate) {
-      if (!timeStr) return false;
-      const fullDateStr = getDateString(targetDate);     // ví dụ: "21/10/2026"
-      const shortDateStr = getShortDateString(targetDate); // ví dụ: "21/10"
-      return timeStr.includes(fullDateStr) || timeStr.includes(shortDateStr);
-    }
-
-    function renderDailyRemindersManagement() {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-
-      const strToday = getDateString(today);
-      const strYesterday = getDateString(yesterday);
-
-      document.getElementById('lblTodayDate').innerText = strToday;
-      document.getElementById('lblYesterdayDate').innerText = strYesterday;
-
-      // Dataset dùng để tổng hợp: Nếu là Admin TCT -> Toàn quốc. Nếu là Đơn vị -> Chỉ phạm vi đơn vị
-      const dataset = (currentUser && currentUser.role === 'ADMIN') ? rawDataset : rawDataset.filter(d => {
-        return d.province.includes(currentUser.unitName) || currentUser.unitName.includes(d.province) || (currentUser.unitCode && d.unitCode === currentUser.unitCode);
-      });
-
-      // 1. Tính toán số lần gửi Hôm nay vs Hôm qua của 3 tầng
-      let tctToday = 0, tctYesterday = 0;
-      let cqtToday = 0, cqtYesterday = 0;
-      let nvkdToday = 0, nvkdYesterday = 0;
-
-      // Cơ cấu phản hồi của khách hàng
-      const feedbackCounts = {
-        'HEN_TRA': 0,
-        'DA_TRA': 0,
-        'KHONG_NGHE': 0,
-        'DOI_SO': 0,
-        'TIEU_CUC': 0,
-        'CHUA_LIEN_HE': 0,
-        'KHAC': 0
-      };
-
-      // Thống kê theo từng đơn vị
-      const unitMap = {};
-      const unitsList = (currentUser && currentUser.role === 'ADMIN') ? UNIT_DEFINITIONS : UNIT_DEFINITIONS.filter(u => u.code === currentUser.unitCode || u.name === currentUser.unitName);
-      unitsList.forEach(u => {
-        unitMap[u.name] = {
-          name: u.name,
-          code: u.code,
-          totalLoans: 0,
-          tctToday: 0,
-          tctYesterday: 0,
-          cqtToday: 0,
-          cqtYesterday: 0,
-          nvkdToday: 0,
-          nvkdYesterday: 0,
-          positiveCount: 0, // Hẹn trả + Đã trả
-          riskCount: 0       // Đổi số + Tiêu cực
-        };
-      });
-
-      dataset.forEach(item => {
-        const st = item.status;
-        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
-        const unitKey = u ? u.name : item.province;
-        if (!unitMap[unitKey]) {
-          unitMap[unitKey] = {
-            name: unitKey,
-            code: item.unitCode || "---",
-            totalLoans: 0,
-            tctToday: 0,
-            tctYesterday: 0,
-            cqtToday: 0,
-            cqtYesterday: 0,
-            nvkdToday: 0,
-            nvkdYesterday: 0,
-            positiveCount: 0,
-            riskCount: 0
-          };
-        }
-        unitMap[unitKey].totalLoans++;
-
-        // Kiểm tra layer TCT
-        if (st.tctStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.tctTime, today)) {
-            tctToday++;
-            unitMap[unitKey].tctToday++;
-          } else if (matchDateInTimeString(st.tctTime, yesterday)) {
-            tctYesterday++;
-            unitMap[unitKey].tctYesterday++;
-          } else if (!st.tctTime) {
-            // Nếu không ghi mốc giờ, tính tạm vào ngày hiện tại
-            tctToday++;
-            unitMap[unitKey].tctToday++;
-          }
-        }
-
-        // Kiểm tra layer CQT
-        if (st.cqtStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.cqtTime, today)) {
-            cqtToday++;
-            unitMap[unitKey].cqtToday++;
-          } else if (matchDateInTimeString(st.cqtTime, yesterday)) {
-            cqtYesterday++;
-            unitMap[unitKey].cqtYesterday++;
-          }
-        }
-
-        // Kiểm tra layer NVKD
-        if (st.nvkdStatus === 'DA_NHAN') {
-          if (matchDateInTimeString(st.nvkdTime, today)) {
-            nvkdToday++;
-            unitMap[unitKey].nvkdToday++;
-          } else if (matchDateInTimeString(st.nvkdTime, yesterday)) {
-            nvkdYesterday++;
-            unitMap[unitKey].nvkdYesterday++;
-          }
-        }
-
-        // Phản hồi khách hàng
-        const fb = st.feedback || 'CHUA_LIEN_HE';
-        if (feedbackCounts[fb] !== undefined) feedbackCounts[fb]++;
-        else feedbackCounts['KHAC'] = (feedbackCounts['KHAC'] || 0) + 1;
-
-        if (fb === 'HEN_TRA' || fb === 'DA_TRA') unitMap[unitKey].positiveCount++;
-        if (fb === 'DOI_SO' || fb === 'TIEU_CUC') unitMap[unitKey].riskCount++;
-      });
-
-      // Render số liệu 3 cấp lên thẻ KPI
-      document.getElementById('statTctToday').innerText = tctToday.toLocaleString('vi-VN');
-      document.getElementById('statTctYesterday').innerText = tctYesterday.toLocaleString('vi-VN');
-      const diffTctVal = tctToday - tctYesterday;
-      document.getElementById('diffTct').innerText = (diffTctVal >= 0 ? `+${diffTctVal}` : `${diffTctVal}`);
-      document.getElementById('diffTct').className = diffTctVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-      document.getElementById('statCqtToday').innerText = cqtToday.toLocaleString('vi-VN');
-      document.getElementById('statCqtYesterday').innerText = cqtYesterday.toLocaleString('vi-VN');
-      const diffCqtVal = cqtToday - cqtYesterday;
-      document.getElementById('diffCqt').innerText = (diffCqtVal >= 0 ? `+${diffCqtVal}` : `${diffCqtVal}`);
-      document.getElementById('diffCqt').className = diffCqtVal >= 0 ? "text-blue-600 font-bold" : "text-rose-600 font-bold";
-
-      document.getElementById('statNvkdToday').innerText = nvkdToday.toLocaleString('vi-VN');
-      document.getElementById('statNvkdYesterday').innerText = nvkdYesterday.toLocaleString('vi-VN');
-      const diffNvkdVal = nvkdToday - nvkdYesterday;
-      document.getElementById('diffNvkd').innerText = (diffNvkdVal >= 0 ? `+${diffNvkdVal}` : `${diffNvkdVal}`);
-      document.getElementById('diffNvkd').className = diffNvkdVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-      // Render cơ cấu phản hồi KH
-      const totalDataset = dataset.length || 1;
-      ['HEN_TRA', 'DA_TRA', 'KHONG_NGHE', 'DOI_SO', 'TIEU_CUC', 'CHUA_LIEN_HE'].forEach(key => {
-        const cnt = feedbackCounts[key] || 0;
-        const pct = Math.round((cnt / totalDataset) * 100);
-        const countEl = document.getElementById(`fbCount_${key}`);
-        const pctEl = document.getElementById(`fbPct_${key}`);
-        if (countEl) countEl.innerText = cnt.toLocaleString('vi-VN');
-        if (pctEl) pctEl.innerText = `${pct}%`;
-      });
-
-      // Render bảng chi tiết từng đơn vị
-      const tbody = document.getElementById('dailyRemindersTableBody');
-      tbody.innerHTML = '';
-      const listUnits = Object.values(unitMap).sort((a, b) => b.nvkdToday - a.nvkdToday || b.totalLoans - a.totalLoans);
-
-      listUnits.forEach((u, idx) => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition border-b border-slate-100 text-[11px]";
-        tr.innerHTML = `
-          <td class="p-1.5 text-center text-slate-400 font-medium">${idx + 1}</td>
-          <td class="p-1.5 truncate">
-            <span class="font-bold text-slate-800">${u.name}</span>
-            <span class="text-[9px] text-slate-400 font-mono ml-1">(${u.code})</span>
-          </td>
-          <td class="p-1.5 text-center font-bold">${u.totalLoans}</td>
-          <td class="p-1.5 text-center bg-indigo-50/30">
-            <span class="font-bold text-indigo-700">${u.tctToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.tctYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center bg-blue-50/30">
-            <span class="font-bold text-blue-700">${u.cqtToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.cqtYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center bg-emerald-50/30">
-            <span class="font-bold text-emerald-700">${u.nvkdToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.nvkdYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center font-semibold text-emerald-700">
-            ${u.positiveCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.positiveCount / u.totalLoans)*100) : 0}%)</span>
-          </td>
-          <td class="p-1.5 text-center font-semibold text-rose-700">
-            ${u.riskCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.riskCount / u.totalLoans)*100) : 0}%)</span>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // XUẤT EXCEL BÁO CÁO ĐÔN ĐỐC TOÀN QUỐC HÀNG NGÀY (HÔM NAY VS HÔM QUA)
-    function exportDailyRemindersReportExcel() {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-      const strToday = getDateString(today);
-      const strYesterday = getDateString(yesterday);
-
-      // Sheet 1: Tổng hợp theo từng đơn vị
-      const unitMap = {};
-      UNIT_DEFINITIONS.forEach(u => {
-        unitMap[u.name] = {
-          name: u.name,
-          code: u.code,
-          totalLoans: 0,
-          totalDue: 0,
-          tctToday: 0,
-          tctYesterday: 0,
-          cqtToday: 0,
-          cqtYesterday: 0,
-          nvkdToday: 0,
-          nvkdYesterday: 0,
-          henTra: 0,
-          daTra: 0,
-          thueBao: 0,
-          doiSo: 0,
-          tieuCuc: 0,
-          chuaPhanHoi: 0
-        };
-      });
-
-      rawDataset.forEach(item => {
-        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
-        const k = u ? u.name : item.province;
-        if (!unitMap[k]) {
-          unitMap[k] = { name: k, code: item.unitCode || "---", totalLoans: 0, totalDue: 0, tctToday: 0, tctYesterday: 0, cqtToday: 0, cqtYesterday: 0, nvkdToday: 0, nvkdYesterday: 0, henTra: 0, daTra: 0, thueBao: 0, doiSo: 0, tieuCuc: 0, chuaPhanHoi: 0 };
-        }
-        unitMap[k].totalLoans++;
-        unitMap[k].totalDue += (item.outstandingDue || 0);
-
-        const st = item.status;
-        if (st.tctStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.tctTime, today) || !st.tctTime) unitMap[k].tctToday++;
-          else if (matchDateInTimeString(st.tctTime, yesterday)) unitMap[k].tctYesterday++;
-        }
-        if (st.cqtStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.cqtTime, today)) unitMap[k].cqtToday++;
-          else if (matchDateInTimeString(st.cqtTime, yesterday)) unitMap[k].cqtYesterday++;
-        }
-        if (st.nvkdStatus === 'DA_NHAN') {
-          if (matchDateInTimeString(st.nvkdTime, today)) unitMap[k].nvkdToday++;
-          else if (matchDateInTimeString(st.nvkdTime, yesterday)) unitMap[k].nvkdYesterday++;
-        }
-
-        const fb = st.feedback;
-        if (fb === 'HEN_TRA') unitMap[k].henTra++;
-        else if (fb === 'DA_TRA') unitMap[k].daTra++;
-        else if (fb === 'KHONG_NGHE') unitMap[k].thueBao++;
-        else if (fb === 'DOI_SO') unitMap[k].doiSo++;
-        else if (fb === 'TIEU_CUC') unitMap[k].tieuCuc++;
-        else unitMap[k].chuaPhanHoi++;
-      });
-
-      const summaryData = Object.values(unitMap).map((u, i) => ({
-        "STT": i + 1,
-        "Mã bưu điện": u.code,
-        "Tên Bưu điện tỉnh / TP": u.name,
-        "Tổng số khoản nợ": u.totalLoans,
-        "Tổng tiền cần thu (VNĐ)": u.totalDue,
-        [`TCT gửi CQT (Hôm nay ${strToday})`]: u.tctToday,
-        [`TCT gửi CQT (Hôm qua ${strYesterday})`]: u.tctYesterday,
-        [`CQT gửi NVKD (Hôm nay ${strToday})`]: u.cqtToday,
-        [`CQT gửi NVKD (Hôm qua ${strYesterday})`]: u.cqtYesterday,
-        [`NVKD nhắn tin KH (Hôm nay ${strToday})`]: u.nvkdToday,
-        [`NVKD nhắn tin KH (Hôm qua ${strYesterday})`]: u.nvkdYesterday,
-        "Khách hẹn ngày trả": u.henTra,
-        "Khách đã nộp / Tra soát": u.daTra,
-        "Thuê bao / Không nghe": u.thueBao,
-        "Khách đã đổi số ĐT": u.doiSo,
-        "Khách thách thức / Thóa mạ": u.tieuCuc,
-        "Chưa có phản hồi": u.chuaPhanHoi
-      }));
-
-      // Sheet 2: Danh sách chi tiết các khoản nợ có phản hồi của khách hàng
-      const detailFeedbackData = rawDataset.filter(d => d.status.feedback !== 'CHUA_LIEN_HE').map((d, idx) => ({
-        "STT": idx + 1,
-        "Đơn vị": d.province,
-        "Mã hợp đồng": d.contractId,
-        "Tên khách hàng": d.customerName,
-        "SĐT khách hàng": d.customerPhone,
-        "Tiền cần thu (VNĐ)": d.outstandingDue,
-        "Số ngày quá hạn": d.overdueDays,
-        "NVKD phụ trách": d.staffName,
-        "SĐT NVKD": d.staffCode,
-        "Thời gian NVKD gửi tin": d.status.nvkdTime || "",
-        "Phản hồi từ khách hàng": d.status.feedback,
-        "Ghi chú chi tiết trao đổi": d.status.note || "",
-        "Cập nhật lần cuối": d.status.lastUpdated || ""
-      }));
-
-      const wb = XLSX.utils.book_new();
-      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, wsSummary, "Tong_Hop_Don_Doc_3_Cap");
-
-      const wsDetail = XLSX.utils.json_to_sheet(detailFeedbackData);
-      XLSX.utils.book_append_sheet(wb, wsDetail, "Chi_Tiet_Phan_Hoi_KH");
-
-      XLSX.writeFile(wb, `Bao_Cao_Don_Doc_Va_Phan_Hoi_KH_${new Date().toISOString().slice(0, 10)}.xlsx`);
-      showToast("Đã xuất báo cáo đôn đốc toàn quốc thành công!");
-    }
-
-  </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-    // ==================== QUẢN LÝ TIẾN ĐỘ ĐÔN ĐỐC & PHẢN HỒI KH THEO NGÀY ====================
-    function getDateString(d) {
-      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-    }
-
-    function getShortDateString(d) {
-      return `${d.getDate()}/${d.getMonth() + 1}`;
-    }
-
-    // Kiểm tra xem chuỗi thời gian (timeStr) có khớp với ngày target hay không
-    function matchDateInTimeString(timeStr, targetDate) {
-      if (!timeStr) return false;
-      const fullDateStr = getDateString(targetDate);     // ví dụ: "21/10/2026"
-      const shortDateStr = getShortDateString(targetDate); // ví dụ: "21/10"
-      return timeStr.includes(fullDateStr) || timeStr.includes(shortDateStr);
-    }
-
-    function renderDailyRemindersManagement() {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-
-      const strToday = getDateString(today);
-      const strYesterday = getDateString(yesterday);
-
-      document.getElementById('lblTodayDate').innerText = strToday;
-      document.getElementById('lblYesterdayDate').innerText = strYesterday;
-
-      // Dataset dùng để tổng hợp: Nếu là Admin TCT -> Toàn quốc. Nếu là Đơn vị -> Chỉ phạm vi đơn vị
-      const dataset = (currentUser && currentUser.role === 'ADMIN') ? rawDataset : rawDataset.filter(d => {
-        return d.province.includes(currentUser.unitName) || currentUser.unitName.includes(d.province) || (currentUser.unitCode && d.unitCode === currentUser.unitCode);
-      });
-
-      // 1. Tính toán số lần gửi Hôm nay vs Hôm qua của 3 tầng
-      let tctToday = 0, tctYesterday = 0;
-      let cqtToday = 0, cqtYesterday = 0;
-      let nvkdToday = 0, nvkdYesterday = 0;
-
-      // Cơ cấu phản hồi của khách hàng
-      const feedbackCounts = {
-        'HEN_TRA': 0,
-        'DA_TRA': 0,
-        'KHONG_NGHE': 0,
-        'DOI_SO': 0,
-        'TIEU_CUC': 0,
-        'CHUA_LIEN_HE': 0,
-        'KHAC': 0
-      };
-
-      // Thống kê theo từng đơn vị
-      const unitMap = {};
-      const unitsList = (currentUser && currentUser.role === 'ADMIN') ? UNIT_DEFINITIONS : UNIT_DEFINITIONS.filter(u => u.code === currentUser.unitCode || u.name === currentUser.unitName);
-      unitsList.forEach(u => {
-        unitMap[u.name] = {
-          name: u.name,
-          code: u.code,
-          totalLoans: 0,
-          tctToday: 0,
-          tctYesterday: 0,
-          cqtToday: 0,
-          cqtYesterday: 0,
-          nvkdToday: 0,
-          nvkdYesterday: 0,
-          positiveCount: 0, // Hẹn trả + Đã trả
-          riskCount: 0       // Đổi số + Tiêu cực
-        };
-      });
-
-      dataset.forEach(item => {
-        const st = item.status;
-        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
-        const unitKey = u ? u.name : item.province;
-        if (!unitMap[unitKey]) {
-          unitMap[unitKey] = {
-            name: unitKey,
-            code: item.unitCode || "---",
-            totalLoans: 0,
-            tctToday: 0,
-            tctYesterday: 0,
-            cqtToday: 0,
-            cqtYesterday: 0,
-            nvkdToday: 0,
-            nvkdYesterday: 0,
-            positiveCount: 0,
-            riskCount: 0
-          };
-        }
-        unitMap[unitKey].totalLoans++;
-
-        // Kiểm tra layer TCT
-        if (st.tctStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.tctTime, today)) {
-            tctToday++;
-            unitMap[unitKey].tctToday++;
-          } else if (matchDateInTimeString(st.tctTime, yesterday)) {
-            tctYesterday++;
-            unitMap[unitKey].tctYesterday++;
-          } else if (!st.tctTime) {
-            // Nếu không ghi mốc giờ, tính tạm vào ngày hiện tại
-            tctToday++;
-            unitMap[unitKey].tctToday++;
-          }
-        }
-
-        // Kiểm tra layer CQT
-        if (st.cqtStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.cqtTime, today)) {
-            cqtToday++;
-            unitMap[unitKey].cqtToday++;
-          } else if (matchDateInTimeString(st.cqtTime, yesterday)) {
-            cqtYesterday++;
-            unitMap[unitKey].cqtYesterday++;
-          }
-        }
-
-        // Kiểm tra layer NVKD
-        if (st.nvkdStatus === 'DA_NHAN') {
-          if (matchDateInTimeString(st.nvkdTime, today)) {
-            nvkdToday++;
-            unitMap[unitKey].nvkdToday++;
-          } else if (matchDateInTimeString(st.nvkdTime, yesterday)) {
-            nvkdYesterday++;
-            unitMap[unitKey].nvkdYesterday++;
-          }
-        }
-
-        // Phản hồi khách hàng
-        const fb = st.feedback || 'CHUA_LIEN_HE';
-        if (feedbackCounts[fb] !== undefined) feedbackCounts[fb]++;
-        else feedbackCounts['KHAC'] = (feedbackCounts['KHAC'] || 0) + 1;
-
-        if (fb === 'HEN_TRA' || fb === 'DA_TRA') unitMap[unitKey].positiveCount++;
-        if (fb === 'DOI_SO' || fb === 'TIEU_CUC') unitMap[unitKey].riskCount++;
-      });
-
-      // Render số liệu 3 cấp lên thẻ KPI
-      document.getElementById('statTctToday').innerText = tctToday.toLocaleString('vi-VN');
-      document.getElementById('statTctYesterday').innerText = tctYesterday.toLocaleString('vi-VN');
-      const diffTctVal = tctToday - tctYesterday;
-      document.getElementById('diffTct').innerText = (diffTctVal >= 0 ? `+${diffTctVal}` : `${diffTctVal}`);
-      document.getElementById('diffTct').className = diffTctVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-      document.getElementById('statCqtToday').innerText = cqtToday.toLocaleString('vi-VN');
-      document.getElementById('statCqtYesterday').innerText = cqtYesterday.toLocaleString('vi-VN');
-      const diffCqtVal = cqtToday - cqtYesterday;
-      document.getElementById('diffCqt').innerText = (diffCqtVal >= 0 ? `+${diffCqtVal}` : `${diffCqtVal}`);
-      document.getElementById('diffCqt').className = diffCqtVal >= 0 ? "text-blue-600 font-bold" : "text-rose-600 font-bold";
-
-      document.getElementById('statNvkdToday').innerText = nvkdToday.toLocaleString('vi-VN');
-      document.getElementById('statNvkdYesterday').innerText = nvkdYesterday.toLocaleString('vi-VN');
-      const diffNvkdVal = nvkdToday - nvkdYesterday;
-      document.getElementById('diffNvkd').innerText = (diffNvkdVal >= 0 ? `+${diffNvkdVal}` : `${diffNvkdVal}`);
-      document.getElementById('diffNvkd').className = diffNvkdVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-      // Render cơ cấu phản hồi KH
-      const totalDataset = dataset.length || 1;
-      ['HEN_TRA', 'DA_TRA', 'KHONG_NGHE', 'DOI_SO', 'TIEU_CUC', 'CHUA_LIEN_HE'].forEach(key => {
-        const cnt = feedbackCounts[key] || 0;
-        const pct = Math.round((cnt / totalDataset) * 100);
-        const countEl = document.getElementById(`fbCount_${key}`);
-        const pctEl = document.getElementById(`fbPct_${key}`);
-        if (countEl) countEl.innerText = cnt.toLocaleString('vi-VN');
-        if (pctEl) pctEl.innerText = `${pct}%`;
-      });
-
-      // Render bảng chi tiết từng đơn vị
-      const tbody = document.getElementById('dailyRemindersTableBody');
-      tbody.innerHTML = '';
-      const listUnits = Object.values(unitMap).sort((a, b) => b.nvkdToday - a.nvkdToday || b.totalLoans - a.totalLoans);
-
-      listUnits.forEach((u, idx) => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition border-b border-slate-100 text-[11px]";
-        tr.innerHTML = `
-          <td class="p-1.5 text-center text-slate-400 font-medium">${idx + 1}</td>
-          <td class="p-1.5 truncate">
-            <span class="font-bold text-slate-800">${u.name}</span>
-            <span class="text-[9px] text-slate-400 font-mono ml-1">(${u.code})</span>
-          </td>
-          <td class="p-1.5 text-center font-bold">${u.totalLoans}</td>
-          <td class="p-1.5 text-center bg-indigo-50/30">
-            <span class="font-bold text-indigo-700">${u.tctToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.tctYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center bg-blue-50/30">
-            <span class="font-bold text-blue-700">${u.cqtToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.cqtYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center bg-emerald-50/30">
-            <span class="font-bold text-emerald-700">${u.nvkdToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.nvkdYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center font-semibold text-emerald-700">
-            ${u.positiveCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.positiveCount / u.totalLoans)*100) : 0}%)</span>
-          </td>
-          <td class="p-1.5 text-center font-semibold text-rose-700">
-            ${u.riskCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.riskCount / u.totalLoans)*100) : 0}%)</span>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // XUẤT EXCEL BÁO CÁO ĐÔN ĐỐC TOÀN QUỐC HÀNG NGÀY (HÔM NAY VS HÔM QUA)
-    function exportDailyRemindersReportExcel() {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-      const strToday = getDateString(today);
-      const strYesterday = getDateString(yesterday);
-
-      // Sheet 1: Tổng hợp theo từng đơn vị
-      const unitMap = {};
-      UNIT_DEFINITIONS.forEach(u => {
-        unitMap[u.name] = {
-          name: u.name,
-          code: u.code,
-          totalLoans: 0,
-          totalDue: 0,
-          tctToday: 0,
-          tctYesterday: 0,
-          cqtToday: 0,
-          cqtYesterday: 0,
-          nvkdToday: 0,
-          nvkdYesterday: 0,
-          henTra: 0,
-          daTra: 0,
-          thueBao: 0,
-          doiSo: 0,
-          tieuCuc: 0,
-          chuaPhanHoi: 0
-        };
-      });
-
-      rawDataset.forEach(item => {
-        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
-        const k = u ? u.name : item.province;
-        if (!unitMap[k]) {
-          unitMap[k] = { name: k, code: item.unitCode || "---", totalLoans: 0, totalDue: 0, tctToday: 0, tctYesterday: 0, cqtToday: 0, cqtYesterday: 0, nvkdToday: 0, nvkdYesterday: 0, henTra: 0, daTra: 0, thueBao: 0, doiSo: 0, tieuCuc: 0, chuaPhanHoi: 0 };
-        }
-        unitMap[k].totalLoans++;
-        unitMap[k].totalDue += (item.outstandingDue || 0);
-
-        const st = item.status;
-        if (st.tctStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.tctTime, today) || !st.tctTime) unitMap[k].tctToday++;
-          else if (matchDateInTimeString(st.tctTime, yesterday)) unitMap[k].tctYesterday++;
-        }
-        if (st.cqtStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.cqtTime, today)) unitMap[k].cqtToday++;
-          else if (matchDateInTimeString(st.cqtTime, yesterday)) unitMap[k].cqtYesterday++;
-        }
-        if (st.nvkdStatus === 'DA_NHAN') {
-          if (matchDateInTimeString(st.nvkdTime, today)) unitMap[k].nvkdToday++;
-          else if (matchDateInTimeString(st.nvkdTime, yesterday)) unitMap[k].nvkdYesterday++;
-        }
-
-        const fb = st.feedback;
-        if (fb === 'HEN_TRA') unitMap[k].henTra++;
-        else if (fb === 'DA_TRA') unitMap[k].daTra++;
-        else if (fb === 'KHONG_NGHE') unitMap[k].thueBao++;
-        else if (fb === 'DOI_SO') unitMap[k].doiSo++;
-        else if (fb === 'TIEU_CUC') unitMap[k].tieuCuc++;
-        else unitMap[k].chuaPhanHoi++;
-      });
-
-      const summaryData = Object.values(unitMap).map((u, i) => ({
-        "STT": i + 1,
-        "Mã bưu điện": u.code,
-        "Tên Bưu điện tỉnh / TP": u.name,
-        "Tổng số khoản nợ": u.totalLoans,
-        "Tổng tiền cần thu (VNĐ)": u.totalDue,
-        [`TCT gửi CQT (Hôm nay ${strToday})`]: u.tctToday,
-        [`TCT gửi CQT (Hôm qua ${strYesterday})`]: u.tctYesterday,
-        [`CQT gửi NVKD (Hôm nay ${strToday})`]: u.cqtToday,
-        [`CQT gửi NVKD (Hôm qua ${strYesterday})`]: u.cqtYesterday,
-        [`NVKD nhắn tin KH (Hôm nay ${strToday})`]: u.nvkdToday,
-        [`NVKD nhắn tin KH (Hôm qua ${strYesterday})`]: u.nvkdYesterday,
-        "Khách hẹn ngày trả": u.henTra,
-        "Khách đã nộp / Tra soát": u.daTra,
-        "Thuê bao / Không nghe": u.thueBao,
-        "Khách đã đổi số ĐT": u.doiSo,
-        "Khách thách thức / Thóa mạ": u.tieuCuc,
-        "Chưa có phản hồi": u.chuaPhanHoi
-      }));
-
-      // Sheet 2: Danh sách chi tiết các khoản nợ có phản hồi của khách hàng
-      const detailFeedbackData = rawDataset.filter(d => d.status.feedback !== 'CHUA_LIEN_HE').map((d, idx) => ({
-        "STT": idx + 1,
-        "Đơn vị": d.province,
-        "Mã hợp đồng": d.contractId,
-        "Tên khách hàng": d.customerName,
-        "SĐT khách hàng": d.customerPhone,
-        "Tiền cần thu (VNĐ)": d.outstandingDue,
-        "Số ngày quá hạn": d.overdueDays,
-        "NVKD phụ trách": d.staffName,
-        "SĐT NVKD": d.staffCode,
-        "Thời gian NVKD gửi tin": d.status.nvkdTime || "",
-        "Phản hồi từ khách hàng": d.status.feedback,
-        "Ghi chú chi tiết trao đổi": d.status.note || "",
-        "Cập nhật lần cuối": d.status.lastUpdated || ""
-      }));
-
-      const wb = XLSX.utils.book_new();
-      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, wsSummary, "Tong_Hop_Don_Doc_3_Cap");
-
-      const wsDetail = XLSX.utils.json_to_sheet(detailFeedbackData);
-      XLSX.utils.book_append_sheet(wb, wsDetail, "Chi_Tiet_Phan_Hoi_KH");
-
-      XLSX.writeFile(wb, `Bao_Cao_Don_Doc_Va_Phan_Hoi_KH_${new Date().toISOString().slice(0, 10)}.xlsx`);
-      showToast("Đã xuất báo cáo đôn đốc toàn quốc thành công!");
-    }
-
-  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Firebase SDK (v8) -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js">
-    // ==================== QUẢN LÝ TIẾN ĐỘ ĐÔN ĐỐC & PHẢN HỒI KH THEO NGÀY ====================
-    function getDateString(d) {
-      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-    }
-
-    function getShortDateString(d) {
-      return `${d.getDate()}/${d.getMonth() + 1}`;
-    }
-
-    // Kiểm tra xem chuỗi thời gian (timeStr) có khớp với ngày target hay không
-    function matchDateInTimeString(timeStr, targetDate) {
-      if (!timeStr) return false;
-      const fullDateStr = getDateString(targetDate);     // ví dụ: "21/10/2026"
-      const shortDateStr = getShortDateString(targetDate); // ví dụ: "21/10"
-      return timeStr.includes(fullDateStr) || timeStr.includes(shortDateStr);
-    }
-
-    function renderDailyRemindersManagement() {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-
-      const strToday = getDateString(today);
-      const strYesterday = getDateString(yesterday);
-
-      document.getElementById('lblTodayDate').innerText = strToday;
-      document.getElementById('lblYesterdayDate').innerText = strYesterday;
-
-      // Dataset dùng để tổng hợp: Nếu là Admin TCT -> Toàn quốc. Nếu là Đơn vị -> Chỉ phạm vi đơn vị
-      const dataset = (currentUser && currentUser.role === 'ADMIN') ? rawDataset : rawDataset.filter(d => {
-        return d.province.includes(currentUser.unitName) || currentUser.unitName.includes(d.province) || (currentUser.unitCode && d.unitCode === currentUser.unitCode);
-      });
-
-      // 1. Tính toán số lần gửi Hôm nay vs Hôm qua của 3 tầng
-      let tctToday = 0, tctYesterday = 0;
-      let cqtToday = 0, cqtYesterday = 0;
-      let nvkdToday = 0, nvkdYesterday = 0;
-
-      // Cơ cấu phản hồi của khách hàng
-      const feedbackCounts = {
-        'HEN_TRA': 0,
-        'DA_TRA': 0,
-        'KHONG_NGHE': 0,
-        'DOI_SO': 0,
-        'TIEU_CUC': 0,
-        'CHUA_LIEN_HE': 0,
-        'KHAC': 0
-      };
-
-      // Thống kê theo từng đơn vị
-      const unitMap = {};
-      const unitsList = (currentUser && currentUser.role === 'ADMIN') ? UNIT_DEFINITIONS : UNIT_DEFINITIONS.filter(u => u.code === currentUser.unitCode || u.name === currentUser.unitName);
-      unitsList.forEach(u => {
-        unitMap[u.name] = {
-          name: u.name,
-          code: u.code,
-          totalLoans: 0,
-          tctToday: 0,
-          tctYesterday: 0,
-          cqtToday: 0,
-          cqtYesterday: 0,
-          nvkdToday: 0,
-          nvkdYesterday: 0,
-          positiveCount: 0, // Hẹn trả + Đã trả
-          riskCount: 0       // Đổi số + Tiêu cực
-        };
-      });
-
-      dataset.forEach(item => {
-        const st = item.status;
-        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
-        const unitKey = u ? u.name : item.province;
-        if (!unitMap[unitKey]) {
-          unitMap[unitKey] = {
-            name: unitKey,
-            code: item.unitCode || "---",
-            totalLoans: 0,
-            tctToday: 0,
-            tctYesterday: 0,
-            cqtToday: 0,
-            cqtYesterday: 0,
-            nvkdToday: 0,
-            nvkdYesterday: 0,
-            positiveCount: 0,
-            riskCount: 0
-          };
-        }
-        unitMap[unitKey].totalLoans++;
-
-        // Kiểm tra layer TCT
-        if (st.tctStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.tctTime, today)) {
-            tctToday++;
-            unitMap[unitKey].tctToday++;
-          } else if (matchDateInTimeString(st.tctTime, yesterday)) {
-            tctYesterday++;
-            unitMap[unitKey].tctYesterday++;
-          } else if (!st.tctTime) {
-            // Nếu không ghi mốc giờ, tính tạm vào ngày hiện tại
-            tctToday++;
-            unitMap[unitKey].tctToday++;
-          }
-        }
-
-        // Kiểm tra layer CQT
-        if (st.cqtStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.cqtTime, today)) {
-            cqtToday++;
-            unitMap[unitKey].cqtToday++;
-          } else if (matchDateInTimeString(st.cqtTime, yesterday)) {
-            cqtYesterday++;
-            unitMap[unitKey].cqtYesterday++;
-          }
-        }
-
-        // Kiểm tra layer NVKD
-        if (st.nvkdStatus === 'DA_NHAN') {
-          if (matchDateInTimeString(st.nvkdTime, today)) {
-            nvkdToday++;
-            unitMap[unitKey].nvkdToday++;
-          } else if (matchDateInTimeString(st.nvkdTime, yesterday)) {
-            nvkdYesterday++;
-            unitMap[unitKey].nvkdYesterday++;
-          }
-        }
-
-        // Phản hồi khách hàng
-        const fb = st.feedback || 'CHUA_LIEN_HE';
-        if (feedbackCounts[fb] !== undefined) feedbackCounts[fb]++;
-        else feedbackCounts['KHAC'] = (feedbackCounts['KHAC'] || 0) + 1;
-
-        if (fb === 'HEN_TRA' || fb === 'DA_TRA') unitMap[unitKey].positiveCount++;
-        if (fb === 'DOI_SO' || fb === 'TIEU_CUC') unitMap[unitKey].riskCount++;
-      });
-
-      // Render số liệu 3 cấp lên thẻ KPI
-      document.getElementById('statTctToday').innerText = tctToday.toLocaleString('vi-VN');
-      document.getElementById('statTctYesterday').innerText = tctYesterday.toLocaleString('vi-VN');
-      const diffTctVal = tctToday - tctYesterday;
-      document.getElementById('diffTct').innerText = (diffTctVal >= 0 ? `+${diffTctVal}` : `${diffTctVal}`);
-      document.getElementById('diffTct').className = diffTctVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-      document.getElementById('statCqtToday').innerText = cqtToday.toLocaleString('vi-VN');
-      document.getElementById('statCqtYesterday').innerText = cqtYesterday.toLocaleString('vi-VN');
-      const diffCqtVal = cqtToday - cqtYesterday;
-      document.getElementById('diffCqt').innerText = (diffCqtVal >= 0 ? `+${diffCqtVal}` : `${diffCqtVal}`);
-      document.getElementById('diffCqt').className = diffCqtVal >= 0 ? "text-blue-600 font-bold" : "text-rose-600 font-bold";
-
-      document.getElementById('statNvkdToday').innerText = nvkdToday.toLocaleString('vi-VN');
-      document.getElementById('statNvkdYesterday').innerText = nvkdYesterday.toLocaleString('vi-VN');
-      const diffNvkdVal = nvkdToday - nvkdYesterday;
-      document.getElementById('diffNvkd').innerText = (diffNvkdVal >= 0 ? `+${diffNvkdVal}` : `${diffNvkdVal}`);
-      document.getElementById('diffNvkd').className = diffNvkdVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-      // Render cơ cấu phản hồi KH
-      const totalDataset = dataset.length || 1;
-      ['HEN_TRA', 'DA_TRA', 'KHONG_NGHE', 'DOI_SO', 'TIEU_CUC', 'CHUA_LIEN_HE'].forEach(key => {
-        const cnt = feedbackCounts[key] || 0;
-        const pct = Math.round((cnt / totalDataset) * 100);
-        const countEl = document.getElementById(`fbCount_${key}`);
-        const pctEl = document.getElementById(`fbPct_${key}`);
-        if (countEl) countEl.innerText = cnt.toLocaleString('vi-VN');
-        if (pctEl) pctEl.innerText = `${pct}%`;
-      });
-
-      // Render bảng chi tiết từng đơn vị
-      const tbody = document.getElementById('dailyRemindersTableBody');
-      tbody.innerHTML = '';
-      const listUnits = Object.values(unitMap).sort((a, b) => b.nvkdToday - a.nvkdToday || b.totalLoans - a.totalLoans);
-
-      listUnits.forEach((u, idx) => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition border-b border-slate-100 text-[11px]";
-        tr.innerHTML = `
-          <td class="p-1.5 text-center text-slate-400 font-medium">${idx + 1}</td>
-          <td class="p-1.5 truncate">
-            <span class="font-bold text-slate-800">${u.name}</span>
-            <span class="text-[9px] text-slate-400 font-mono ml-1">(${u.code})</span>
-          </td>
-          <td class="p-1.5 text-center font-bold">${u.totalLoans}</td>
-          <td class="p-1.5 text-center bg-indigo-50/30">
-            <span class="font-bold text-indigo-700">${u.tctToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.tctYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center bg-blue-50/30">
-            <span class="font-bold text-blue-700">${u.cqtToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.cqtYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center bg-emerald-50/30">
-            <span class="font-bold text-emerald-700">${u.nvkdToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.nvkdYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center font-semibold text-emerald-700">
-            ${u.positiveCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.positiveCount / u.totalLoans)*100) : 0}%)</span>
-          </td>
-          <td class="p-1.5 text-center font-semibold text-rose-700">
-            ${u.riskCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.riskCount / u.totalLoans)*100) : 0}%)</span>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // XUẤT EXCEL BÁO CÁO ĐÔN ĐỐC TOÀN QUỐC HÀNG NGÀY (HÔM NAY VS HÔM QUA)
-    function exportDailyRemindersReportExcel() {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-      const strToday = getDateString(today);
-      const strYesterday = getDateString(yesterday);
-
-      // Sheet 1: Tổng hợp theo từng đơn vị
-      const unitMap = {};
-      UNIT_DEFINITIONS.forEach(u => {
-        unitMap[u.name] = {
-          name: u.name,
-          code: u.code,
-          totalLoans: 0,
-          totalDue: 0,
-          tctToday: 0,
-          tctYesterday: 0,
-          cqtToday: 0,
-          cqtYesterday: 0,
-          nvkdToday: 0,
-          nvkdYesterday: 0,
-          henTra: 0,
-          daTra: 0,
-          thueBao: 0,
-          doiSo: 0,
-          tieuCuc: 0,
-          chuaPhanHoi: 0
-        };
-      });
-
-      rawDataset.forEach(item => {
-        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
-        const k = u ? u.name : item.province;
-        if (!unitMap[k]) {
-          unitMap[k] = { name: k, code: item.unitCode || "---", totalLoans: 0, totalDue: 0, tctToday: 0, tctYesterday: 0, cqtToday: 0, cqtYesterday: 0, nvkdToday: 0, nvkdYesterday: 0, henTra: 0, daTra: 0, thueBao: 0, doiSo: 0, tieuCuc: 0, chuaPhanHoi: 0 };
-        }
-        unitMap[k].totalLoans++;
-        unitMap[k].totalDue += (item.outstandingDue || 0);
-
-        const st = item.status;
-        if (st.tctStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.tctTime, today) || !st.tctTime) unitMap[k].tctToday++;
-          else if (matchDateInTimeString(st.tctTime, yesterday)) unitMap[k].tctYesterday++;
-        }
-        if (st.cqtStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.cqtTime, today)) unitMap[k].cqtToday++;
-          else if (matchDateInTimeString(st.cqtTime, yesterday)) unitMap[k].cqtYesterday++;
-        }
-        if (st.nvkdStatus === 'DA_NHAN') {
-          if (matchDateInTimeString(st.nvkdTime, today)) unitMap[k].nvkdToday++;
-          else if (matchDateInTimeString(st.nvkdTime, yesterday)) unitMap[k].nvkdYesterday++;
-        }
-
-        const fb = st.feedback;
-        if (fb === 'HEN_TRA') unitMap[k].henTra++;
-        else if (fb === 'DA_TRA') unitMap[k].daTra++;
-        else if (fb === 'KHONG_NGHE') unitMap[k].thueBao++;
-        else if (fb === 'DOI_SO') unitMap[k].doiSo++;
-        else if (fb === 'TIEU_CUC') unitMap[k].tieuCuc++;
-        else unitMap[k].chuaPhanHoi++;
-      });
-
-      const summaryData = Object.values(unitMap).map((u, i) => ({
-        "STT": i + 1,
-        "Mã bưu điện": u.code,
-        "Tên Bưu điện tỉnh / TP": u.name,
-        "Tổng số khoản nợ": u.totalLoans,
-        "Tổng tiền cần thu (VNĐ)": u.totalDue,
-        [`TCT gửi CQT (Hôm nay ${strToday})`]: u.tctToday,
-        [`TCT gửi CQT (Hôm qua ${strYesterday})`]: u.tctYesterday,
-        [`CQT gửi NVKD (Hôm nay ${strToday})`]: u.cqtToday,
-        [`CQT gửi NVKD (Hôm qua ${strYesterday})`]: u.cqtYesterday,
-        [`NVKD nhắn tin KH (Hôm nay ${strToday})`]: u.nvkdToday,
-        [`NVKD nhắn tin KH (Hôm qua ${strYesterday})`]: u.nvkdYesterday,
-        "Khách hẹn ngày trả": u.henTra,
-        "Khách đã nộp / Tra soát": u.daTra,
-        "Thuê bao / Không nghe": u.thueBao,
-        "Khách đã đổi số ĐT": u.doiSo,
-        "Khách thách thức / Thóa mạ": u.tieuCuc,
-        "Chưa có phản hồi": u.chuaPhanHoi
-      }));
-
-      // Sheet 2: Danh sách chi tiết các khoản nợ có phản hồi của khách hàng
-      const detailFeedbackData = rawDataset.filter(d => d.status.feedback !== 'CHUA_LIEN_HE').map((d, idx) => ({
-        "STT": idx + 1,
-        "Đơn vị": d.province,
-        "Mã hợp đồng": d.contractId,
-        "Tên khách hàng": d.customerName,
-        "SĐT khách hàng": d.customerPhone,
-        "Tiền cần thu (VNĐ)": d.outstandingDue,
-        "Số ngày quá hạn": d.overdueDays,
-        "NVKD phụ trách": d.staffName,
-        "SĐT NVKD": d.staffCode,
-        "Thời gian NVKD gửi tin": d.status.nvkdTime || "",
-        "Phản hồi từ khách hàng": d.status.feedback,
-        "Ghi chú chi tiết trao đổi": d.status.note || "",
-        "Cập nhật lần cuối": d.status.lastUpdated || ""
-      }));
-
-      const wb = XLSX.utils.book_new();
-      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, wsSummary, "Tong_Hop_Don_Doc_3_Cap");
-
-      const wsDetail = XLSX.utils.json_to_sheet(detailFeedbackData);
-      XLSX.utils.book_append_sheet(wb, wsDetail, "Chi_Tiet_Phan_Hoi_KH");
-
-      XLSX.writeFile(wb, `Bao_Cao_Don_Doc_Va_Phan_Hoi_KH_${new Date().toISOString().slice(0, 10)}.xlsx`);
-      showToast("Đã xuất báo cáo đôn đốc toàn quốc thành công!");
-    }
-
-  </script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js">
-    // ==================== QUẢN LÝ TIẾN ĐỘ ĐÔN ĐỐC & PHẢN HỒI KH THEO NGÀY ====================
-    function getDateString(d) {
-      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-    }
-
-    function getShortDateString(d) {
-      return `${d.getDate()}/${d.getMonth() + 1}`;
-    }
-
-    // Kiểm tra xem chuỗi thời gian (timeStr) có khớp với ngày target hay không
-    function matchDateInTimeString(timeStr, targetDate) {
-      if (!timeStr) return false;
-      const fullDateStr = getDateString(targetDate);     // ví dụ: "21/10/2026"
-      const shortDateStr = getShortDateString(targetDate); // ví dụ: "21/10"
-      return timeStr.includes(fullDateStr) || timeStr.includes(shortDateStr);
-    }
-
-    function renderDailyRemindersManagement() {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-
-      const strToday = getDateString(today);
-      const strYesterday = getDateString(yesterday);
-
-      document.getElementById('lblTodayDate').innerText = strToday;
-      document.getElementById('lblYesterdayDate').innerText = strYesterday;
-
-      // Dataset dùng để tổng hợp: Nếu là Admin TCT -> Toàn quốc. Nếu là Đơn vị -> Chỉ phạm vi đơn vị
-      const dataset = (currentUser && currentUser.role === 'ADMIN') ? rawDataset : rawDataset.filter(d => {
-        return d.province.includes(currentUser.unitName) || currentUser.unitName.includes(d.province) || (currentUser.unitCode && d.unitCode === currentUser.unitCode);
-      });
-
-      // 1. Tính toán số lần gửi Hôm nay vs Hôm qua của 3 tầng
-      let tctToday = 0, tctYesterday = 0;
-      let cqtToday = 0, cqtYesterday = 0;
-      let nvkdToday = 0, nvkdYesterday = 0;
-
-      // Cơ cấu phản hồi của khách hàng
-      const feedbackCounts = {
-        'HEN_TRA': 0,
-        'DA_TRA': 0,
-        'KHONG_NGHE': 0,
-        'DOI_SO': 0,
-        'TIEU_CUC': 0,
-        'CHUA_LIEN_HE': 0,
-        'KHAC': 0
-      };
-
-      // Thống kê theo từng đơn vị
-      const unitMap = {};
-      const unitsList = (currentUser && currentUser.role === 'ADMIN') ? UNIT_DEFINITIONS : UNIT_DEFINITIONS.filter(u => u.code === currentUser.unitCode || u.name === currentUser.unitName);
-      unitsList.forEach(u => {
-        unitMap[u.name] = {
-          name: u.name,
-          code: u.code,
-          totalLoans: 0,
-          tctToday: 0,
-          tctYesterday: 0,
-          cqtToday: 0,
-          cqtYesterday: 0,
-          nvkdToday: 0,
-          nvkdYesterday: 0,
-          positiveCount: 0, // Hẹn trả + Đã trả
-          riskCount: 0       // Đổi số + Tiêu cực
-        };
-      });
-
-      dataset.forEach(item => {
-        const st = item.status;
-        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
-        const unitKey = u ? u.name : item.province;
-        if (!unitMap[unitKey]) {
-          unitMap[unitKey] = {
-            name: unitKey,
-            code: item.unitCode || "---",
-            totalLoans: 0,
-            tctToday: 0,
-            tctYesterday: 0,
-            cqtToday: 0,
-            cqtYesterday: 0,
-            nvkdToday: 0,
-            nvkdYesterday: 0,
-            positiveCount: 0,
-            riskCount: 0
-          };
-        }
-        unitMap[unitKey].totalLoans++;
-
-        // Kiểm tra layer TCT
-        if (st.tctStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.tctTime, today)) {
-            tctToday++;
-            unitMap[unitKey].tctToday++;
-          } else if (matchDateInTimeString(st.tctTime, yesterday)) {
-            tctYesterday++;
-            unitMap[unitKey].tctYesterday++;
-          } else if (!st.tctTime) {
-            // Nếu không ghi mốc giờ, tính tạm vào ngày hiện tại
-            tctToday++;
-            unitMap[unitKey].tctToday++;
-          }
-        }
-
-        // Kiểm tra layer CQT
-        if (st.cqtStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.cqtTime, today)) {
-            cqtToday++;
-            unitMap[unitKey].cqtToday++;
-          } else if (matchDateInTimeString(st.cqtTime, yesterday)) {
-            cqtYesterday++;
-            unitMap[unitKey].cqtYesterday++;
-          }
-        }
-
-        // Kiểm tra layer NVKD
-        if (st.nvkdStatus === 'DA_NHAN') {
-          if (matchDateInTimeString(st.nvkdTime, today)) {
-            nvkdToday++;
-            unitMap[unitKey].nvkdToday++;
-          } else if (matchDateInTimeString(st.nvkdTime, yesterday)) {
-            nvkdYesterday++;
-            unitMap[unitKey].nvkdYesterday++;
-          }
-        }
-
-        // Phản hồi khách hàng
-        const fb = st.feedback || 'CHUA_LIEN_HE';
-        if (feedbackCounts[fb] !== undefined) feedbackCounts[fb]++;
-        else feedbackCounts['KHAC'] = (feedbackCounts['KHAC'] || 0) + 1;
-
-        if (fb === 'HEN_TRA' || fb === 'DA_TRA') unitMap[unitKey].positiveCount++;
-        if (fb === 'DOI_SO' || fb === 'TIEU_CUC') unitMap[unitKey].riskCount++;
-      });
-
-      // Render số liệu 3 cấp lên thẻ KPI
-      document.getElementById('statTctToday').innerText = tctToday.toLocaleString('vi-VN');
-      document.getElementById('statTctYesterday').innerText = tctYesterday.toLocaleString('vi-VN');
-      const diffTctVal = tctToday - tctYesterday;
-      document.getElementById('diffTct').innerText = (diffTctVal >= 0 ? `+${diffTctVal}` : `${diffTctVal}`);
-      document.getElementById('diffTct').className = diffTctVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-      document.getElementById('statCqtToday').innerText = cqtToday.toLocaleString('vi-VN');
-      document.getElementById('statCqtYesterday').innerText = cqtYesterday.toLocaleString('vi-VN');
-      const diffCqtVal = cqtToday - cqtYesterday;
-      document.getElementById('diffCqt').innerText = (diffCqtVal >= 0 ? `+${diffCqtVal}` : `${diffCqtVal}`);
-      document.getElementById('diffCqt').className = diffCqtVal >= 0 ? "text-blue-600 font-bold" : "text-rose-600 font-bold";
-
-      document.getElementById('statNvkdToday').innerText = nvkdToday.toLocaleString('vi-VN');
-      document.getElementById('statNvkdYesterday').innerText = nvkdYesterday.toLocaleString('vi-VN');
-      const diffNvkdVal = nvkdToday - nvkdYesterday;
-      document.getElementById('diffNvkd').innerText = (diffNvkdVal >= 0 ? `+${diffNvkdVal}` : `${diffNvkdVal}`);
-      document.getElementById('diffNvkd').className = diffNvkdVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-      // Render cơ cấu phản hồi KH
-      const totalDataset = dataset.length || 1;
-      ['HEN_TRA', 'DA_TRA', 'KHONG_NGHE', 'DOI_SO', 'TIEU_CUC', 'CHUA_LIEN_HE'].forEach(key => {
-        const cnt = feedbackCounts[key] || 0;
-        const pct = Math.round((cnt / totalDataset) * 100);
-        const countEl = document.getElementById(`fbCount_${key}`);
-        const pctEl = document.getElementById(`fbPct_${key}`);
-        if (countEl) countEl.innerText = cnt.toLocaleString('vi-VN');
-        if (pctEl) pctEl.innerText = `${pct}%`;
-      });
-
-      // Render bảng chi tiết từng đơn vị
-      const tbody = document.getElementById('dailyRemindersTableBody');
-      tbody.innerHTML = '';
-      const listUnits = Object.values(unitMap).sort((a, b) => b.nvkdToday - a.nvkdToday || b.totalLoans - a.totalLoans);
-
-      listUnits.forEach((u, idx) => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition border-b border-slate-100 text-[11px]";
-        tr.innerHTML = `
-          <td class="p-1.5 text-center text-slate-400 font-medium">${idx + 1}</td>
-          <td class="p-1.5 truncate">
-            <span class="font-bold text-slate-800">${u.name}</span>
-            <span class="text-[9px] text-slate-400 font-mono ml-1">(${u.code})</span>
-          </td>
-          <td class="p-1.5 text-center font-bold">${u.totalLoans}</td>
-          <td class="p-1.5 text-center bg-indigo-50/30">
-            <span class="font-bold text-indigo-700">${u.tctToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.tctYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center bg-blue-50/30">
-            <span class="font-bold text-blue-700">${u.cqtToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.cqtYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center bg-emerald-50/30">
-            <span class="font-bold text-emerald-700">${u.nvkdToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.nvkdYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center font-semibold text-emerald-700">
-            ${u.positiveCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.positiveCount / u.totalLoans)*100) : 0}%)</span>
-          </td>
-          <td class="p-1.5 text-center font-semibold text-rose-700">
-            ${u.riskCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.riskCount / u.totalLoans)*100) : 0}%)</span>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // XUẤT EXCEL BÁO CÁO ĐÔN ĐỐC TOÀN QUỐC HÀNG NGÀY (HÔM NAY VS HÔM QUA)
-    function exportDailyRemindersReportExcel() {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-      const strToday = getDateString(today);
-      const strYesterday = getDateString(yesterday);
-
-      // Sheet 1: Tổng hợp theo từng đơn vị
-      const unitMap = {};
-      UNIT_DEFINITIONS.forEach(u => {
-        unitMap[u.name] = {
-          name: u.name,
-          code: u.code,
-          totalLoans: 0,
-          totalDue: 0,
-          tctToday: 0,
-          tctYesterday: 0,
-          cqtToday: 0,
-          cqtYesterday: 0,
-          nvkdToday: 0,
-          nvkdYesterday: 0,
-          henTra: 0,
-          daTra: 0,
-          thueBao: 0,
-          doiSo: 0,
-          tieuCuc: 0,
-          chuaPhanHoi: 0
-        };
-      });
-
-      rawDataset.forEach(item => {
-        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
-        const k = u ? u.name : item.province;
-        if (!unitMap[k]) {
-          unitMap[k] = { name: k, code: item.unitCode || "---", totalLoans: 0, totalDue: 0, tctToday: 0, tctYesterday: 0, cqtToday: 0, cqtYesterday: 0, nvkdToday: 0, nvkdYesterday: 0, henTra: 0, daTra: 0, thueBao: 0, doiSo: 0, tieuCuc: 0, chuaPhanHoi: 0 };
-        }
-        unitMap[k].totalLoans++;
-        unitMap[k].totalDue += (item.outstandingDue || 0);
-
-        const st = item.status;
-        if (st.tctStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.tctTime, today) || !st.tctTime) unitMap[k].tctToday++;
-          else if (matchDateInTimeString(st.tctTime, yesterday)) unitMap[k].tctYesterday++;
-        }
-        if (st.cqtStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.cqtTime, today)) unitMap[k].cqtToday++;
-          else if (matchDateInTimeString(st.cqtTime, yesterday)) unitMap[k].cqtYesterday++;
-        }
-        if (st.nvkdStatus === 'DA_NHAN') {
-          if (matchDateInTimeString(st.nvkdTime, today)) unitMap[k].nvkdToday++;
-          else if (matchDateInTimeString(st.nvkdTime, yesterday)) unitMap[k].nvkdYesterday++;
-        }
-
-        const fb = st.feedback;
-        if (fb === 'HEN_TRA') unitMap[k].henTra++;
-        else if (fb === 'DA_TRA') unitMap[k].daTra++;
-        else if (fb === 'KHONG_NGHE') unitMap[k].thueBao++;
-        else if (fb === 'DOI_SO') unitMap[k].doiSo++;
-        else if (fb === 'TIEU_CUC') unitMap[k].tieuCuc++;
-        else unitMap[k].chuaPhanHoi++;
-      });
-
-      const summaryData = Object.values(unitMap).map((u, i) => ({
-        "STT": i + 1,
-        "Mã bưu điện": u.code,
-        "Tên Bưu điện tỉnh / TP": u.name,
-        "Tổng số khoản nợ": u.totalLoans,
-        "Tổng tiền cần thu (VNĐ)": u.totalDue,
-        [`TCT gửi CQT (Hôm nay ${strToday})`]: u.tctToday,
-        [`TCT gửi CQT (Hôm qua ${strYesterday})`]: u.tctYesterday,
-        [`CQT gửi NVKD (Hôm nay ${strToday})`]: u.cqtToday,
-        [`CQT gửi NVKD (Hôm qua ${strYesterday})`]: u.cqtYesterday,
-        [`NVKD nhắn tin KH (Hôm nay ${strToday})`]: u.nvkdToday,
-        [`NVKD nhắn tin KH (Hôm qua ${strYesterday})`]: u.nvkdYesterday,
-        "Khách hẹn ngày trả": u.henTra,
-        "Khách đã nộp / Tra soát": u.daTra,
-        "Thuê bao / Không nghe": u.thueBao,
-        "Khách đã đổi số ĐT": u.doiSo,
-        "Khách thách thức / Thóa mạ": u.tieuCuc,
-        "Chưa có phản hồi": u.chuaPhanHoi
-      }));
-
-      // Sheet 2: Danh sách chi tiết các khoản nợ có phản hồi của khách hàng
-      const detailFeedbackData = rawDataset.filter(d => d.status.feedback !== 'CHUA_LIEN_HE').map((d, idx) => ({
-        "STT": idx + 1,
-        "Đơn vị": d.province,
-        "Mã hợp đồng": d.contractId,
-        "Tên khách hàng": d.customerName,
-        "SĐT khách hàng": d.customerPhone,
-        "Tiền cần thu (VNĐ)": d.outstandingDue,
-        "Số ngày quá hạn": d.overdueDays,
-        "NVKD phụ trách": d.staffName,
-        "SĐT NVKD": d.staffCode,
-        "Thời gian NVKD gửi tin": d.status.nvkdTime || "",
-        "Phản hồi từ khách hàng": d.status.feedback,
-        "Ghi chú chi tiết trao đổi": d.status.note || "",
-        "Cập nhật lần cuối": d.status.lastUpdated || ""
-      }));
-
-      const wb = XLSX.utils.book_new();
-      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, wsSummary, "Tong_Hop_Don_Doc_3_Cap");
-
-      const wsDetail = XLSX.utils.json_to_sheet(detailFeedbackData);
-      XLSX.utils.book_append_sheet(wb, wsDetail, "Chi_Tiet_Phan_Hoi_KH");
-
-      XLSX.writeFile(wb, `Bao_Cao_Don_Doc_Va_Phan_Hoi_KH_${new Date().toISOString().slice(0, 10)}.xlsx`);
-      showToast("Đã xuất báo cáo đôn đốc toàn quốc thành công!");
-    }
-
-  </script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow-x: hidden; }
     .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -1616,7 +26,7 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
 
-  <!-- ==================== MÀN HÌNH ĐĂNG NHẬP ==================== -->
+  <!-- ==================== MÀN HÌNH ĐĂNG NHẬP 3 LAYER ==================== -->
   <div id="loginScreen" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 border border-slate-200">
       <div class="text-center mb-6">
@@ -1624,18 +34,18 @@
           <i class="fa-solid fa-building-columns"></i>
         </div>
         <h2 class="text-xl font-bold text-slate-800 uppercase tracking-tight">Hệ Thống Thu Hồi Nợ TCT</h2>
-        <p class="text-xs text-slate-500 mt-1">Đăng nhập tài khoản làm việc nội bộ Bưu điện</p>
+        <p class="text-xs text-slate-500 mt-1">Đăng nhập tài khoản điều hành 3 cấp: TCT / Chuyên quản / Đơn vị</p>
       </div>
 
       <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">TÊN ĐĂNG NHẬP / MÃ BƯU ĐIỆN</label>
+          <label class="block text-xs font-bold text-slate-700 mb-1">TÊN ĐĂNG NHẬP</label>
           <div class="relative">
             <i class="fa-solid fa-user absolute left-3 top-3 text-slate-400 text-xs"></i>
-            <input type="text" id="loginUsername" required placeholder="admin hoặc Mã bưu điện (VD: 39000, 10000)" 
+            <input type="text" id="loginUsername" required placeholder="admin / Tên chuyên quản / Mã bưu điện" 
                    class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-indigo-600 focus:bg-white font-mono">
           </div>
-          <span class="text-[10px] text-slate-400 mt-1 block">TCT đăng nhập bằng tài khoản Quản trị | Đơn vị đăng nhập bằng Mã bưu điện</span>
+          <span class="text-[10px] text-slate-400 mt-1 block">TCT: <b class="font-mono text-indigo-700">admin</b> | Chuyên quản: <b class="font-mono text-indigo-700">cq1, cq2...</b> | Đơn vị: <b class="font-mono text-indigo-700">Mã bưu điện (VD: 39000)</b></span>
         </div>
 
         <div>
@@ -1656,9 +66,9 @@
     </div>
   </div>
 
-  <!-- ==================== HEADER ==================== -->
+  <!-- ==================== HEADER (TỐI ƯU GỌN GÀNG, KHÔNG DÀN HÀNG NGANG) ==================== -->
   <header class="bg-indigo-950 text-white shadow-md border-b border-indigo-800 sticky top-0 z-30">
-    <div class="w-full px-3 py-2.5 flex flex-col md:flex-row justify-between items-center gap-2">
+    <div class="w-full px-3 py-2 flex flex-col md:flex-row justify-between items-center gap-2">
       <div class="flex items-center space-x-3">
         <div class="bg-amber-400 text-indigo-950 p-1.5 rounded-lg font-black text-base shadow">
           <i class="fa-solid fa-building-columns"></i>
@@ -1672,31 +82,25 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-1.5 flex-wrap justify-end">
-        <button id="btnOfficerConfig" onclick="openOfficerModal()" class="hidden text-xs bg-indigo-800 hover:bg-indigo-700 text-amber-300 font-semibold px-2.5 py-1.5 rounded-lg border border-indigo-600 flex items-center gap-1 shadow-sm">
-          <i class="fa-solid fa-users-viewfinder"></i> Cấu hình Chuyên quản
+      <!-- Menu thao tác góc phải tinh gọn -->
+      <div class="flex items-center gap-2 flex-wrap justify-end">
+        <!-- NÚT DUY NHẤT TÍCH HỢP QUẢN TRỊ HỆ THỐNG TCT (CHỈ LAYER 1 TCT THẤY) -->
+        <button id="btnUnifiedAdmin" onclick="openUnifiedAdminModal()" class="hidden text-xs bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-indigo-950 font-extrabold px-3 py-1.5 rounded-lg shadow-md border border-amber-400 items-center gap-1.5 transition">
+          <i class="fa-solid fa-gear text-sm"></i> Quản Trị Hệ Thống TCT
         </button>
 
-        <button id="btnOnlineConfig" onclick="openConfigModal()" class="hidden text-xs bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 px-2.5 py-1.5 rounded-lg border border-indigo-700 items-center gap-1" title="Cấu hình kết nối Online Firebase (Dành cho Admin TCT)">
-          <i class="fa-solid fa-cloud"></i> Cấu hình Online
-        </button>
-
-        <button id="btnAdminAccounts" onclick="openAccountsModal()" class="hidden text-xs bg-amber-500 hover:bg-amber-600 text-indigo-950 font-bold px-2.5 py-1.5 rounded-lg shadow flex items-center gap-1">
-          <i class="fa-solid fa-users-gear"></i> QL Tài Khoản (52 Đơn vị)
-        </button>
-
-        <button id="btnChangePass" onclick="openChangePassModal()" class="text-xs bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 px-2.5 py-1.5 rounded-lg border border-indigo-700 flex items-center gap-1">
+        <button id="btnChangePass" onclick="openChangePassModal()" class="text-xs bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 px-2.5 py-1.5 rounded-lg border border-indigo-700 flex items-center gap-1 transition">
           <i class="fa-solid fa-key"></i> Đổi MK
         </button>
 
-        <button onclick="handleLogout()" class="text-xs bg-rose-900/80 hover:bg-rose-800 text-rose-200 px-2.5 py-1.5 rounded-lg border border-rose-700 flex items-center gap-1">
+        <button onclick="handleLogout()" class="text-xs bg-rose-900/80 hover:bg-rose-800 text-rose-200 px-2.5 py-1.5 rounded-lg border border-rose-700 flex items-center gap-1 transition">
           <i class="fa-solid fa-right-from-bracket"></i> Thoát
         </button>
       </div>
     </div>
   </header>
 
-  <!-- ==================== MAIN CONTAINER (VỪA 1 TRANG KHÔNG CUỘN NGANG) ==================== -->
+  <!-- ==================== MAIN CONTAINER ==================== -->
   <main class="w-full px-2 sm:px-3 py-2 space-y-2 flex-1">
 
     <!-- Thông báo File & Lịch sử nạp -->
@@ -1717,14 +121,12 @@
     <div id="adminToolbar" class="hidden bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 flex flex-col lg:flex-row items-center justify-between gap-2">
       <div class="flex items-center gap-2 w-full lg:w-auto flex-wrap">
         <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5">
-          <i class="fa-solid fa-file-arrow-up text-xs"></i> Nạp Excel Mới (TCT)
+          <i class="fa-solid fa-file-arrow-up text-xs"></i> Nạp Báo Cáo Excel Mới (TCT)
           <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden" onchange="handleAdminFileUpload(event)">
         </label>
-        <button onclick="loadSampleData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 transition flex items-center gap-1">
-          <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Nạp Data Mẫu
-        </button>
-        <button onclick="deleteAllLoadedData()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-rose-300 transition flex items-center gap-1">
-          <i class="fa-solid fa-trash-can"></i> Xóa Dữ Liệu Nạp
+        
+        <button onclick="promptDeleteAllData()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-rose-300 transition flex items-center gap-1">
+          <i class="fa-solid fa-trash-can"></i> Xóa Dữ Liệu Nạp (Cần MK)
         </button>
       </div>
 
@@ -1789,10 +191,10 @@
         </div>
       </div>
 
-      <!-- BỘ LỌC DỮ LIỆU ĐA TẦNG (ẨN "SỐ KHOẢN/TỈNH" ĐỐI VỚI TÀI KHOẢN TỈNH) -->
+      <!-- BỘ LỌC DỮ LIỆU ĐA TẦNG -->
       <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm space-y-2">
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
-          <!-- Lọc Chuyên quản (Chỉ admin thao tác, tỉnh bị disable) -->
+          <!-- Lọc Chuyên quản -->
           <div>
             <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">CHUYÊN QUẢN:</label>
             <select id="officerFilter" onchange="onOfficerChanged()" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600">
@@ -1808,7 +210,7 @@
             </select>
           </div>
 
-          <!-- YÊU CẦU 2: Lọc theo Số khoản / Tỉnh (CHỈ ADMIN TCT MỚI THẤY KHỐI NÀY) -->
+          <!-- Lọc theo Số khoản / Tỉnh (Chỉ Layer 1 TCT và Layer 2 CQ thấy) -->
           <div id="colLoanRangeFilter">
             <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">SỐ KHOẢN / TỈNH:</label>
             <select id="loanRangeFilter" onchange="applyFilters()" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600">
@@ -1857,23 +259,21 @@
           </div>
         </div>
 
-        <!-- YÊU CẦU 3.2: THANH THAO TÁC CHUYỂN TRẠNG THÁI HÀNG LOẠT VÀ SAO CHÉP BẢN TIN -->
+        <!-- THANH THAO TÁC HÀNG LOẠT & ĐẢO TRẠNG THÁI -->
         <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center text-xs text-slate-500 pt-1.5 border-t border-slate-100 gap-2">
           <div class="flex items-center gap-2 flex-wrap">
             <span>Lọc: <b id="filteredCount" class="text-indigo-700">0</b> / <span id="totalCount">0</span> hồ sơ</span>
             <span class="text-slate-300">|</span>
             <span>Đã chọn: <b id="selectedLoanCount" class="text-amber-600 font-bold">0</b> khoản</span>
             
-            <!-- CÁC NÚT THAY ĐỔI TRẠNG THÁI HÀNG LOẠT & ĐẢO TRẠNG THÁI / BỎ TICK -->
             <div class="flex items-center gap-1 ml-1 bg-amber-50 p-1 rounded-lg border border-amber-200 flex-wrap">
               <span class="text-[10px] font-bold text-amber-900 mr-0.5"><i class="fa-solid fa-bolt text-amber-600"></i> Thao tác (<span id="bulkCountSpan">0</span>):</span>
               
-              <!-- Nút bỏ tick nhanh khi tick nhầm -->
               <button onclick="clearAllSelectedLoans()" class="px-1.5 py-0.5 bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 rounded text-[10px] font-semibold transition flex items-center gap-0.5" title="Bỏ chọn tất cả các dòng đã tick">
                 <i class="fa-solid fa-xmark text-rose-500"></i> Bỏ tick
               </button>
 
-              <!-- KHỐI DÀNH RIÊNG CHO TCT: Chỉ đổi trạng thái TCT gửi CQT (có nút Đã gửi & nút Đảo lại Chưa gửi) -->
+              <!-- KHỐI DÀNH RIÊNG CHO TCT (Layer 1): Chỉ đổi trạng thái TCT gửi CQT -->
               <div id="bulkGroupTCT" class="flex items-center gap-1 border-l border-amber-300 pl-1">
                 <button onclick="applyBulkStatusUpdate('tctStatus', 'DA_GUI')" class="px-2 py-0.5 bg-indigo-700 hover:bg-indigo-800 text-white rounded text-[10px] font-semibold transition flex items-center gap-1" title="Đánh dấu TCT đã gửi cho các khoản đã tick">
                   <i class="fa-solid fa-paper-plane text-[9px]"></i> TCT: Đã gửi
@@ -1883,7 +283,7 @@
                 </button>
               </div>
 
-              <!-- KHỐI DÀNH CHO CƠ SỞ / ĐƠN VỊ TỈNH: Đổi trạng thái CQT và NVKD (kèm nút đảo trạng thái) -->
+              <!-- KHỐI DÀNH CHO CƠ SỞ / ĐƠN VỊ TỈNH / CHUYÊN QUẢN: Đổi trạng thái CQT và NVKD -->
               <div id="bulkGroupUnit" class="hidden items-center gap-1 border-l border-amber-300 pl-1">
                 <button onclick="applyBulkStatusUpdate('cqtStatus', 'DA_GUI')" class="px-2 py-0.5 bg-blue-700 hover:bg-blue-800 text-white rounded text-[10px] font-semibold transition" title="CQT xác nhận đã chuyển cho NVKD">
                   CQT: Đã gửi
@@ -1912,7 +312,7 @@
         </div>
       </div>
 
-      <!-- YÊU CẦU 1: BẢNG DỮ LIỆU VỪA KHÍT 1 TRANG (W-FULL, TABLE-FIXED, KHÔNG CUỘN NGANG) -->
+      <!-- BẢNG DỮ LIỆU VỪA KHÍT 1 TRANG -->
       <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="table-container custom-scroll overflow-y-auto max-h-[580px]">
           <table class="w-full text-left text-[11px] border-collapse table-fixed">
@@ -1925,7 +325,7 @@
               <col style="width: 7%;">    <!-- Quá hạn -->
               <col style="width: 12%;">   <!-- NVKD Phụ trách -->
               <col style="width: 18%;">   <!-- Bản tin nhắc nợ -->
-              <col style="width: 25%;">   <!-- Cập nhật đôn đốc 3 layer kèm timestamp -->
+              <col style="width: 25%;">   <!-- Cập nhật đôn đốc 3 layer + Nút Lưu Ghi chú -->
             </colgroup>
             <thead class="bg-slate-100 text-slate-700 font-semibold sticky top-0 shadow-sm z-10 border-b border-slate-200">
               <tr>
@@ -1942,7 +342,7 @@
                 <th class="p-1.5 bg-indigo-50/80 border-l border-slate-200">
                   <div class="flex items-center justify-between">
                     <span class="text-indigo-950 font-bold">Cập nhật đôn đốc & Phản hồi KH</span>
-                    <span class="text-[9px] text-indigo-700 font-semibold"><i class="fa-solid fa-clock-rotate-left mr-0.5"></i>Lưu mốc giờ từng cấp</span>
+                    <span class="text-[9px] text-indigo-700 font-semibold"><i class="fa-solid fa-floppy-disk mr-0.5"></i>Có nút Lưu ghi chú</span>
                   </div>
                 </th>
               </tr>
@@ -1955,7 +355,6 @@
 
     <!-- ==================== VIEW 2: TRUNG TÂM BÁO CÁO THỐNG KÊ ==================== -->
     <div id="viewReports" class="hidden space-y-4">
-      <!-- 3.1 Báo cáo Top / Below Đơn vị -->
       <div id="unitRankingContainer" class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
           <div>
@@ -1999,7 +398,7 @@
 
       <!-- Grid 2 cột: Top 20 NVKD & Top 20 Vô thừa nhận -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <!-- 3.2 Top 20 NVKD -->
+        <!-- Top 20 NVKD -->
         <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
           <div class="mb-2">
             <h3 class="font-bold text-xs text-slate-800 flex items-center gap-1.5" id="topStaffHeaderTitle">
@@ -2031,7 +430,7 @@
           </div>
         </div>
 
-        <!-- 3.3 Top 20 Khoản nợ Vô Thừa Nhận -->
+        <!-- Top 20 Khoản nợ Vô Thừa Nhận -->
         <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
           <div class="mb-2">
             <h3 class="font-bold text-xs text-rose-700 flex items-center gap-1.5" id="unclaimedHeaderTitle">
@@ -2065,10 +464,8 @@
       </div>
     </div>
 
-  
-    <!-- ==================== VIEW 3: QUẢN TRỊ ĐÔN ĐỐC & PHẢN HỒI KH (HÀNG NGÀY: HÔM NAY VS HÔM QUA) ==================== -->
+    <!-- ==================== VIEW 3: QUẢN TRỊ ĐÔN ĐỐC & PHẢN HỒI KH ==================== -->
     <div id="viewRemindersMgmt" class="hidden space-y-3">
-      <!-- Header thanh công cụ View 3 -->
       <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
         <div>
           <h2 class="font-bold text-xs sm:text-sm text-slate-800 flex items-center gap-2">
@@ -2084,7 +481,6 @@
         </div>
       </div>
 
-      <!-- Thẻ so sánh Hôm nay vs Hôm qua cho 3 cấp: TCT, CQT, NVKD -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
         <!-- 1. TCT gửi CQT -->
         <div class="bg-white p-3 rounded-xl border border-indigo-100 shadow-sm border-l-4 border-l-indigo-600">
@@ -2166,37 +562,31 @@
           KẾT QUẢ KHÁCH HÀNG PHẢN HỒI KHI NVKD LIÊN HỆ ĐÔN ĐỐC
         </h3>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-center">
-          <!-- Hẹn trả -->
           <div class="bg-amber-50 p-2 rounded-lg border border-amber-200">
             <span class="text-[10px] font-bold text-amber-900 block truncate">HẸN NGÀY TRẢ</span>
             <span id="fbCount_HEN_TRA" class="text-base font-bold text-amber-700 block mt-0.5">0</span>
             <span id="fbPct_HEN_TRA" class="text-[9px] text-amber-600">0%</span>
           </div>
-          <!-- Đã nộp tiền / Tra soát -->
           <div class="bg-emerald-50 p-2 rounded-lg border border-emerald-200">
             <span class="text-[10px] font-bold text-emerald-900 block truncate">ĐÃ NỘP / TRA SOÁT</span>
             <span id="fbCount_DA_TRA" class="text-base font-bold text-emerald-700 block mt-0.5">0</span>
             <span id="fbPct_DA_TRA" class="text-[9px] text-emerald-600">0%</span>
           </div>
-          <!-- Thuê bao / Không nghe máy -->
           <div class="bg-slate-100 p-2 rounded-lg border border-slate-200">
             <span class="text-[10px] font-bold text-slate-800 block truncate">THUÊ BAO / KHÔNG NGHE</span>
             <span id="fbCount_KHONG_NGHE" class="text-base font-bold text-slate-700 block mt-0.5">0</span>
             <span id="fbPct_KHONG_NGHE" class="text-[9px] text-slate-500">0%</span>
           </div>
-          <!-- Đã đổi số điện thoại -->
           <div class="bg-purple-50 p-2 rounded-lg border border-purple-200">
             <span class="text-[10px] font-bold text-purple-900 block truncate">ĐÃ ĐỔI SĐT</span>
             <span id="fbCount_DOI_SO" class="text-base font-bold text-purple-700 block mt-0.5">0</span>
             <span id="fbPct_DOI_SO" class="text-[9px] text-purple-600">0%</span>
           </div>
-          <!-- Tiêu cực / Thách thức -->
           <div class="bg-rose-50 p-2 rounded-lg border border-rose-200">
             <span class="text-[10px] font-bold text-rose-900 block truncate">THÁCH THỨC / THÓA MẠ</span>
             <span id="fbCount_TIEU_CUC" class="text-base font-bold text-rose-700 block mt-0.5">0</span>
             <span id="fbPct_TIEU_CUC" class="text-[9px] text-rose-600">0%</span>
           </div>
-          <!-- Chưa có phản hồi -->
           <div class="bg-slate-50 p-2 rounded-lg border border-slate-200">
             <span class="text-[10px] font-bold text-slate-600 block truncate">CHƯA PHẢN HỒI</span>
             <span id="fbCount_CHUA_LIEN_HE" class="text-base font-bold text-slate-600 block mt-0.5">0</span>
@@ -2205,7 +595,7 @@
         </div>
       </div>
 
-      <!-- Bảng Quản trị chi tiết từng Đơn vị/Tỉnh theo dõi số lần cập nhật hàng ngày -->
+      <!-- Bảng Quản trị chi tiết từng Đơn vị/Tỉnh -->
       <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
         <div class="flex justify-between items-center mb-2">
           <h3 class="font-bold text-xs text-slate-800 flex items-center gap-1.5">
@@ -2246,135 +636,129 @@
 
   </main>
 
-  <!-- ==================== MODAL CẤU HÌNH CHUYÊN QUẢN ==================== -->
-  <div id="officerConfigModal" class="hidden fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-5 border border-slate-200 max-h-[90vh] flex flex-col">
-      <div class="flex justify-between items-center pb-2.5 border-b border-slate-200">
-        <div>
-          <h3 class="font-bold text-sm sm:text-base text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-users-viewfinder text-indigo-600"></i> Cấu Hình Đội Ngũ Chuyên Quản Thu Hồi Nợ
-          </h3>
-          <p class="text-[11px] text-slate-500">Thiết lập từ 1 đến 10 chuyên quản và tick chọn địa bàn phụ trách trực tiếp</p>
+  <!-- ==================== YÊU CẦU 3: MODAL TÍCH HỢP QUẢN TRỊ HỆ THỐNG TCT (UNIFIED ADMIN CENTER) ==================== -->
+  <div id="unifiedAdminModal" class="hidden fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-3">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full p-5 border border-slate-200 max-h-[92vh] flex flex-col">
+      <!-- Modal Header -->
+      <div class="flex justify-between items-center pb-3 border-b border-slate-200">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-400 text-indigo-950 flex items-center justify-center text-lg font-black shadow">
+            <i class="fa-solid fa-sliders"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-slate-800">TRUNG TÂM QUẢN TRỊ HỆ THỐNG TỔNG CÔNG TY</h3>
+            <p class="text-[11px] text-slate-500">Quản trị toàn diện: Chuyên quản (Layer 2), 52 Đơn vị (Layer 3) và Kết nối Online</p>
+          </div>
         </div>
-        <button onclick="closeOfficerModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+        <button onclick="closeUnifiedAdminModal()" class="text-slate-400 hover:text-slate-600 text-xl"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <div class="py-2.5 flex items-center gap-3 bg-indigo-50/60 p-2.5 rounded-xl border border-indigo-100 my-2">
-        <label class="text-xs font-bold text-indigo-950">Số lượng chuyên quản:</label>
-        <select id="officerCountSelect" onchange="onOfficerCountChange(this.value)" class="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1 font-bold text-indigo-700">
-          <option value="1">1 Chuyên quản</option>
-          <option value="2">2 Chuyên quản</option>
-          <option value="3">3 Chuyên quản</option>
-          <option value="4" selected>4 Chuyên quản (Mặc định)</option>
-          <option value="5">5 Chuyên quản</option>
-          <option value="6">6 Chuyên quản</option>
-          <option value="7">7 Chuyên quản</option>
-          <option value="8">8 Chuyên quản</option>
-          <option value="9">9 Chuyên quản</option>
-          <option value="10">10 Chuyên quản</option>
-        </select>
-        <span class="text-[11px] text-slate-500">Đổi tên chuyên quản và tick chọn các tỉnh trong 52 bưu điện</span>
+      <!-- Navigation Tabs bên trong Modal Quản Trị -->
+      <div class="flex border-b border-slate-200 mt-2 space-x-2">
+        <button id="adminTabBtn1" onclick="switchAdminModalTab('officers')" class="py-2 px-3 text-xs font-bold border-b-2 border-indigo-600 text-indigo-700 flex items-center gap-1.5">
+          <i class="fa-solid fa-user-shield text-blue-600"></i> 1. Chuyên Quản (Layer 2)
+        </button>
+        <button id="adminTabBtn2" onclick="switchAdminModalTab('units')" class="py-2 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5">
+          <i class="fa-solid fa-users-gear text-amber-500"></i> 2. 52 Đơn Vị (Layer 3)
+        </button>
+        <button id="adminTabBtn3" onclick="switchAdminModalTab('online')" class="py-2 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5">
+          <i class="fa-solid fa-cloud text-indigo-500"></i> 3. Cấu Hình Online Firebase
+        </button>
       </div>
 
-      <div class="flex-1 overflow-y-auto custom-scroll space-y-3 pr-1">
+      <!-- TAB 1: QUẢN TRỊ CHUYÊN QUẢN (LAYER 2) -->
+      <div id="adminModalViewOfficers" class="flex-1 overflow-y-auto custom-scroll py-3 space-y-3">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-indigo-50/60 p-2.5 rounded-xl border border-indigo-100">
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-bold text-indigo-950">Số lượng chuyên quản:</label>
+            <select id="officerCountSelect" onchange="onOfficerCountChange(this.value)" class="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1 font-bold text-indigo-700">
+              <option value="1">1 Chuyên quản</option>
+              <option value="2">2 Chuyên quản</option>
+              <option value="3">3 Chuyên quản</option>
+              <option value="4" selected>4 Chuyên quản (Mặc định)</option>
+              <option value="5">5 Chuyên quản</option>
+              <option value="6">6 Chuyên quản</option>
+              <option value="7">7 Chuyên quản</option>
+              <option value="8">8 Chuyên quản</option>
+              <option value="9">9 Chuyên quản</option>
+              <option value="10">10 Chuyên quản</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="randomizeAllOfficerPasswords()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold px-2.5 py-1 rounded-lg shadow flex items-center gap-1">
+              <i class="fa-solid fa-dice"></i> Random Mật khẩu Tất Cả CQ
+            </button>
+            <button onclick="saveOfficerConfig()" class="text-xs bg-indigo-900 hover:bg-indigo-800 text-amber-300 font-bold px-3 py-1 rounded-lg shadow flex items-center gap-1">
+              <i class="fa-solid fa-floppy-disk"></i> Lưu Thay Đổi
+            </button>
+          </div>
+        </div>
+
         <div id="officerListContainer" class="space-y-3"></div>
       </div>
 
-      <div class="mt-3 pt-2.5 border-t border-slate-200 flex justify-end gap-2">
-        <button onclick="closeOfficerModal()" class="px-3 py-1.5 border border-slate-300 rounded-lg text-xs text-slate-600 font-medium">Hủy bỏ</button>
-        <button onclick="saveOfficerConfig()" class="px-3.5 py-1.5 bg-indigo-900 hover:bg-indigo-800 text-amber-300 font-bold rounded-lg text-xs shadow">
-          <i class="fa-solid fa-floppy-disk mr-1"></i> Lưu Cấu Hình Phân Công
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== MODAL QUẢN TRỊ 52 TÀI KHOẢN (ADMIN) ==================== -->
-  <div id="accountsModal" class="hidden fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3">
-    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-5 border border-slate-200 max-h-[90vh] flex flex-col">
-      <div class="flex justify-between items-center pb-2.5 border-b border-slate-200">
-        <div>
-          <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-users-gear text-amber-600"></i> Quản Trị Danh Sách Tài Khoản 52 Đơn Vị
-          </h3>
-          <p class="text-[11px] text-slate-500">Tạo ngẫu nhiên <b>6 ký tự số</b> và đồng bộ trực tuyến</p>
-        </div>
-        <button onclick="closeAccountsModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-
-      <div class="py-2.5 flex justify-between items-center gap-2 flex-wrap">
-        <input type="text" id="searchAccountInput" oninput="filterAccountsList()" placeholder="Tìm theo mã hoặc tên đơn vị..." class="text-xs p-1.5 bg-slate-50 border border-slate-300 rounded-lg w-56">
-        <div class="flex gap-1.5">
-          <button onclick="exportAccountsExcel()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-2.5 py-1.5 rounded-lg shadow flex items-center gap-1">
-            <i class="fa-solid fa-file-excel"></i> Xuất Excel Mật Khẩu
-          </button>
-          <button onclick="randomizeAllUnitPasswords()" class="text-xs bg-amber-500 hover:bg-amber-600 text-indigo-950 font-bold px-2.5 py-1.5 rounded-lg shadow flex items-center gap-1">
-            <i class="fa-solid fa-dice"></i> Random 6 Số Toàn Mạng Lưới
-          </button>
-        </div>
-      </div>
-
-      <div class="overflow-y-auto custom-scroll flex-1 border border-slate-200 rounded-lg">
-        <table class="w-full text-xs text-left">
-          <thead class="bg-slate-100 sticky top-0 border-b border-slate-200 text-slate-700 font-semibold">
-            <tr>
-              <th class="p-2 text-center w-10">STT</th>
-              <th class="p-2 w-28">Mã bưu điện (Username)</th>
-              <th class="p-2">Tên Bưu điện tỉnh / thành phố</th>
-              <th class="p-2 w-32">Mật khẩu (6 số)</th>
-              <th class="p-2 text-center w-32">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody id="accountsTableBody" class="divide-y divide-slate-100 font-mono"></tbody>
-        </table>
-      </div>
-
-      <div class="mt-3 pt-2.5 border-t border-slate-200 flex justify-end">
-        <button onclick="closeAccountsModal()" class="px-3.5 py-1.5 bg-indigo-900 text-white rounded-lg text-xs font-semibold">Đóng</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL CẤU HÌNH ONLINE FIREBASE TẬP TRUNG (TCT THIẾT LẬP -> TẤT CẢ ĐƠN VỊ TỰ NHẬN) -->
-  <div id="configModal" class="hidden fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-3">
-    <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-5 border border-slate-200">
-      <div class="flex justify-between items-center pb-2.5 border-b border-slate-200">
-        <div>
-          <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-cloud text-indigo-600"></i> Cấu Hình Kết Nối Trực Tuyến Toàn Mạng Lưới
-          </h3>
-          <p class="text-[11px] text-slate-500">Thiết lập 1 lần duy nhất từ TCT - 52 đơn vị tự động đồng bộ theo</p>
-        </div>
-        <button onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-
-      <div class="space-y-3 mt-3 text-xs text-slate-600">
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">Firebase Realtime Database URL:</label>
-          <input type="text" id="firebaseDbUrl" placeholder="https://your-project-default-rtdb.firebaseio.com" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono focus:outline-indigo-600 focus:bg-white">
-          <span class="text-[10px] text-slate-400 mt-1 block">Ví dụ: <code class="text-indigo-600">https://vnpost-debt-default-rtdb.asia-southeast1.firebasedatabase.app/</code></span>
-        </div>
-
-        <div class="bg-indigo-50 p-2.5 rounded-lg border border-indigo-200 text-indigo-950 text-[11px] space-y-1">
-          <div class="font-bold flex items-center gap-1 text-indigo-900">
-            <i class="fa-solid fa-circle-check text-emerald-600"></i> Cơ chế cập nhật tự động cho 52 đơn vị:
+      <!-- TAB 2: QUẢN TRỊ 52 ĐƠN VỊ (LAYER 3) -->
+      <div id="adminModalViewUnits" class="hidden flex-1 overflow-y-auto custom-scroll py-3 space-y-3">
+        <div class="flex justify-between items-center gap-2 flex-wrap">
+          <input type="text" id="searchAccountInput" oninput="filterAccountsList()" placeholder="Tìm theo mã hoặc tên đơn vị..." class="text-xs p-1.5 bg-slate-50 border border-slate-300 rounded-lg w-64">
+          <div class="flex gap-1.5">
+            <button onclick="exportAccountsExcel()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-2.5 py-1.5 rounded-lg shadow flex items-center gap-1">
+              <i class="fa-solid fa-file-excel"></i> Xuất Excel Mật Khẩu 52 Đơn Vị
+            </button>
+            <button onclick="randomizeAllUnitPasswords()" class="text-xs bg-amber-500 hover:bg-amber-600 text-indigo-950 font-bold px-2.5 py-1.5 rounded-lg shadow flex items-center gap-1">
+              <i class="fa-solid fa-dice"></i> Random 6 Số Toàn Bộ 52 Đơn Vị
+            </button>
           </div>
-          <p class="text-slate-600 leading-relaxed">
-            Khi Admin TCT lưu đường link này và tải file web lên GitHub (tên miền <b>taichinhso.cloud</b>), mã nguồn đã tự động gắn sẵn cấu hình này. <b>Tất cả các máy tính của đơn vị khi mở taichinhso.cloud sẽ tự động kết nối Online ngay lập tức</b> mà không đơn vị nào cần phải nhập lại!
-          </p>
+        </div>
+
+        <div class="overflow-y-auto custom-scroll border border-slate-200 rounded-lg max-h-[380px]">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-100 sticky top-0 border-b border-slate-200 text-slate-700 font-semibold">
+              <tr>
+                <th class="p-2 text-center w-10">STT</th>
+                <th class="p-2 w-28">Mã bưu điện (Username)</th>
+                <th class="p-2">Tên Bưu điện tỉnh / thành phố</th>
+                <th class="p-2 w-36">Mật khẩu (6 số)</th>
+                <th class="p-2 text-center w-36">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="accountsTableBody" class="divide-y divide-slate-100 font-mono"></tbody>
+          </table>
         </div>
       </div>
 
-      <div class="mt-4 pt-3 border-t border-slate-200 flex justify-between items-center gap-2 flex-wrap">
-        <button onclick="closeConfigModal()" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 text-xs">Đóng</button>
-        <div class="flex gap-1.5">
-          <button onclick="saveFirebaseConfigLocal()" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-300">
-            Lưu máy này
-          </button>
-          <button onclick="publishConfiguredHtmlForOnline()" class="px-3.5 py-1.5 rounded-lg bg-indigo-900 hover:bg-indigo-800 text-amber-300 font-bold text-xs shadow flex items-center gap-1.5" title="Tải file HTML đã gắn sẵn Firebase URL để up lên GitHub repo taichinhso.cloud">
-            <i class="fa-solid fa-cloud-arrow-up"></i> Lưu & Tải file index.html mới
-          </button>
+      <!-- TAB 3: CẤU HÌNH ONLINE FIREBASE -->
+      <div id="adminModalViewOnline" class="hidden flex-1 overflow-y-auto custom-scroll py-3 space-y-3">
+        <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-2.5 text-xs text-slate-600">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Firebase Realtime Database URL:</label>
+            <input type="text" id="firebaseDbUrl" placeholder="https://your-project-default-rtdb.firebaseio.com" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono focus:outline-indigo-600 focus:bg-white">
+            <span class="text-[10px] text-slate-400 mt-1 block">Ví dụ: <code class="text-indigo-600">https://vnpost-debt-default-rtdb.asia-southeast1.firebasedatabase.app/</code></span>
+          </div>
+
+          <div class="bg-indigo-50 p-2.5 rounded-lg border border-indigo-200 text-indigo-950 text-[11px] space-y-1">
+            <div class="font-bold flex items-center gap-1 text-indigo-900">
+              <i class="fa-solid fa-circle-check text-emerald-600"></i> Cơ chế cập nhật tự động toàn mạng lưới:
+            </div>
+            <p class="text-slate-600 leading-relaxed">
+              Khi Admin TCT nhập đường link này và bấm <b>Lưu & Tải file index.html mới</b>, mã nguồn tải về đã được nhúng sẵn link. Bạn chỉ cần tải đè file index.html này lên GitHub repo (tên miền <b>taichinhso.cloud</b>), thì <b>tất cả các máy tính của Chuyên quản và Đơn vị trên toàn quốc sẽ tự động kết nối Online ngay lập tức</b>.
+            </p>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <button onclick="saveFirebaseConfigLocal()" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-300">
+              Lưu máy này
+            </button>
+            <button onclick="publishConfiguredHtmlForOnline()" class="px-3.5 py-1.5 rounded-lg bg-indigo-900 hover:bg-indigo-800 text-amber-300 font-bold text-xs shadow flex items-center gap-1.5" title="Tải file HTML đã gắn sẵn Firebase URL để up lên GitHub repo taichinhso.cloud">
+              <i class="fa-solid fa-cloud-arrow-up"></i> Lưu & Tải file index.html mới
+            </button>
+          </div>
         </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="mt-3 pt-2.5 border-t border-slate-200 flex justify-end">
+        <button onclick="closeUnifiedAdminModal()" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold">Đóng Quản Trị</button>
       </div>
     </div>
   </div>
@@ -2412,7 +796,7 @@
     <span id="toastMsg">Thao tác thành công!</span>
   </div>
 
-  <!-- ==================== JAVASCRIPT ==================== -->
+  <!-- ==================== JAVASCRIPT HỆ THỐNG ==================== -->
   <script>
     const UNIT_DEFINITIONS = [
       { stt: 1, code: "39000", name: "BĐT Hưng Yên" },
@@ -2485,11 +869,12 @@
       { id: "CQ4", name: "Chuyên quản 4", assignedUnits: ["70000", "96000", "94000", "71000", "92000", "91000", "73000", "93000", "85000", "84000", "74000", "72000", "78000", "79000", "86000", "87000", "76000", "80000"] }
     ];
 
-    const STORAGE_KEY_AUTH = "VNPOST_AUTH_ACCOUNTS_V4";
-    const STORAGE_KEY_DATA = "VNPOST_ACTIVE_DATASET_V4";
-    const STORAGE_KEY_SETTLED = "VNPOST_SETTLED_LIST_V4";
-    const STORAGE_KEY_META = "VNPOST_METADATA_V4";
-    const STORAGE_KEY_OFFICERS = "VNPOST_OFFICERS_V4";
+    const STORAGE_KEY_AUTH = "VNPOST_AUTH_ACCOUNTS_V6";
+    const STORAGE_KEY_OFFICER_AUTH = "VNPOST_OFFICER_ACCOUNTS_V6";
+    const STORAGE_KEY_DATA = "VNPOST_ACTIVE_DATASET_V6";
+    const STORAGE_KEY_SETTLED = "VNPOST_SETTLED_LIST_V6";
+    const STORAGE_KEY_META = "VNPOST_METADATA_V6";
+    const STORAGE_KEY_OFFICERS = "VNPOST_OFFICERS_V6";
     const STORAGE_KEY_FB_URL = "VNPOST_FIREBASE_URL";
 
     function generate6DigitCode() {
@@ -2501,6 +886,31 @@
       return `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')} ${now.getDate()}/${now.getMonth() + 1}`;
     }
 
+    // ==================== YÊU CẦU 1 & 2: BẢN TIN NHẮC NỢ BỔ SUNG SĐT KH VÀ SÁNG TẠO 4 KỊCH BẢN CẢNH BÁO TĂNG DẦN ====================
+    function buildReminderMessage(customerName, customerPhone, contractId, overdueDays, outstandingDue, staffName, staffCode, province) {
+      const contactInfo = (staffName && staffCode) ? `Đ/c ${staffName} - NVKD (SĐT: ${staffCode})` : (staffCode ? `NVKD phụ trách (SĐT: ${staffCode})` : `Cán bộ chuyên quản ${province}`);
+      const phoneDisplay = customerPhone ? ` (SĐT: ${customerPhone})` : ' (Chưa có SĐT)';
+      const dueFormatted = formatVND(outstandingDue);
+
+      // KỊCH BẢN 1: Quá hạn 1 - 10 ngày (Nhắc nhở nhẹ nhàng, đồng hành, tránh quên)
+      if (overdueDays <= 10) {
+        return `[BƯU ĐIỆN VIỆT NAM - THÔNG BÁO NHẮC NỢ ĐẾN HẠN] Kính gửi Quý khách ${customerName}${phoneDisplay}, HĐ vay số ${contractId} hiện đã quá hạn ${overdueDays} ngày. Số tiền cần thanh toán là: ${dueFormatted}. Quý khách vui lòng nộp tiền sớm để duy trì lịch sử tín dụng tốt và tránh phát sinh phí chậm nộp. Chi tiết liên hệ: ${contactInfo}. Trân trọng!`;
+      }
+      // KỊCH BẢN 2: Quá hạn 11 - 30 ngày (Đôn đốc nghiêm túc, cảnh báo tính lãi phạt & ảnh hưởng CIC)
+      else if (overdueDays <= 30) {
+        return `[BƯU ĐIỆN VIỆT NAM - ĐÔN ĐỐC NỢ QUÁ HẠN] Kính gửi Quý khách ${customerName}${phoneDisplay}, HĐ vay số ${contractId} đã quá hạn ${overdueDays} ngày. Số tiền quá hạn cần tất toán ngay: ${dueFormatted}. Khoản nợ đang phát sinh lãi phạt dồn tích mỗi ngày và chuẩn bị ghi nhận nợ cần chú ý trên Trung tâm Thông tin Tín dụng Quốc gia (CIC). Yêu cầu Quý khách thanh toán dứt điểm ngay hôm nay. Hỗ trợ liên hệ: ${contactInfo}.`;
+      }
+      // KỊCH BẢN 3: Quá hạn 31 - 90 ngày (Cảnh báo nợ xấu Nhóm 2 - 3, khóa tín dụng toàn hệ thống, chuyển tổ thu nợ trực tiếp)
+      else if (overdueDays <= 90) {
+        return `[BƯU ĐIỆN VIỆT NAM - CẢNH BÁO NỢ XẤU & XỬ LÝ NỢ] Kính gửi Quý khách ${customerName}${phoneDisplay}, HĐ vay số ${contractId} đã quá hạn nghiêm trọng ${overdueDays} ngày với số tiền nợ: ${dueFormatted}. Hồ sơ của Quý khách đang bị phân loại nợ xấu (Nhóm 2 - Nhóm 3) trên toàn hệ thống ngân hàng CIC, đồng thời hồ sơ đã chuyển về Tổ thu hồi nợ trực tiếp tại địa bàn. Yêu cầu Quý khách thanh toán ngay trước 17h00 để tránh ảnh hưởng gia đình và người thân. Đầu mối tiếp nhận: ${contactInfo}.`;
+      }
+      // KỊCH BẢN 4: Quá hạn trên 90 ngày (>90 ngày) (Răn đe pháp lý nghiêm khắc, khởi kiện Tòa án, phối hợp chính quyền địa phương & nơi làm việc)
+      else {
+        return `[BƯU ĐIỆN VIỆT NAM - THÔNG BÁO XỬ LÝ PHÁP LÝ & KHỞI KIỆN] Kính gửi Quý khách ${customerName}${phoneDisplay}, HĐ số ${contractId} đã quá hạn ${overdueDays} ngày không thanh toán với số tiền: ${dueFormatted}. Do Quý khách cố tình trốn tránh nghĩa vụ trả nợ, Bưu điện Việt Nam đang hoàn tất hồ sơ chuyển Cơ quan Pháp luật / Tòa án có thẩm quyền thụ lý giải quyết, đồng thời gửi công văn về địa phương và cơ quan công tác để tiến hành xác minh, thu hồi tài sản theo quy định pháp luật. Liên hệ giải quyết khẩn cấp: ${contactInfo}.`;
+      }
+    }
+
+    // TÀI KHOẢN VÀ PHÂN QUYỀN
     function getStoredAccounts() {
       let accounts = JSON.parse(localStorage.getItem(STORAGE_KEY_AUTH) || "{}");
       let changed = false;
@@ -2521,10 +931,37 @@
       return accounts;
     }
 
+    function getStoredOfficerAccounts() {
+      let offAccounts = JSON.parse(localStorage.getItem(STORAGE_KEY_OFFICER_AUTH) || "{}");
+      let changed = false;
+
+      officerList.forEach(off => {
+        const uName = off.id.toLowerCase();
+        if (!offAccounts[uName]) {
+          offAccounts[uName] = {
+            officerId: off.id,
+            officerName: off.name,
+            password: generate6DigitCode()
+          };
+          changed = true;
+        }
+      });
+
+      if (changed) localStorage.setItem(STORAGE_KEY_OFFICER_AUTH, JSON.stringify(offAccounts));
+      return offAccounts;
+    }
+
     function saveAccountsSync(accounts) {
       localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(accounts));
       if (isFirebaseActive && firebaseDb) {
         firebaseDb.ref('vnpost_accounts').set(accounts);
+      }
+    }
+
+    function saveOfficerAccountsSync(offAccounts) {
+      localStorage.setItem(STORAGE_KEY_OFFICER_AUTH, JSON.stringify(offAccounts));
+      if (isFirebaseActive && firebaseDb) {
+        firebaseDb.ref('vnpost_officer_accounts').set(offAccounts);
       }
     }
 
@@ -2533,6 +970,16 @@
       if (saved) {
         try { officerList = JSON.parse(saved); } catch(e){}
       }
+    }
+
+    // FIREBASE SYNC
+    const EMBEDDED_FIREBASE_URL = "";
+
+    function getActiveFirebaseUrl() {
+      const stored = localStorage.getItem(STORAGE_KEY_FB_URL);
+      if (stored && stored.trim()) return stored.trim();
+      if (EMBEDDED_FIREBASE_URL && EMBEDDED_FIREBASE_URL.trim()) return EMBEDDED_FIREBASE_URL.trim();
+      return "";
     }
 
     function initFirebase() {
@@ -2566,6 +1013,11 @@
       firebaseDb.ref('vnpost_accounts').on('value', snapshot => {
         const accs = snapshot.val();
         if (accs) localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(accs));
+      });
+
+      firebaseDb.ref('vnpost_officer_accounts').on('value', snapshot => {
+        const offAccs = snapshot.val();
+        if (offAccs) localStorage.setItem(STORAGE_KEY_OFFICER_AUTH, JSON.stringify(offAccs));
       });
 
       firebaseDb.ref('vnpost_officers').on('value', snapshot => {
@@ -2626,69 +1078,95 @@
       alertBox.classList.add('hidden');
 
       const accounts = getStoredAccounts();
-      const account = accounts[uInput];
+      const offAccounts = getStoredOfficerAccounts();
 
-      if (!account || String(account.password) !== pInput) {
-        alertBox.innerText = "Tên đăng nhập hoặc mật khẩu không chính xác!";
-        alertBox.classList.remove('hidden');
+      if (accounts[uInput] && String(accounts[uInput].password) === pInput) {
+        const acc = accounts[uInput];
+        currentUser = {
+          username: uInput,
+          role: acc.role,
+          unitName: acc.unitName,
+          unitCode: acc.unitCode || null
+        };
+        completeLoginSuccess();
         return;
       }
 
-      currentUser = {
-        username: uInput,
-        role: account.role,
-        unitName: account.unitName,
-        unitCode: account.unitCode || null
-      };
+      const uLower = uInput.toLowerCase();
+      if (offAccounts[uLower] && String(offAccounts[uLower].password) === pInput) {
+        const offAcc = offAccounts[uLower];
+        const officerObj = officerList.find(o => o.id === offAcc.officerId) || { id: offAcc.officerId, name: offAcc.officerName, assignedUnits: [] };
+        currentUser = {
+          username: uInput,
+          role: 'OFFICER',
+          unitName: officerObj.name,
+          officerId: officerObj.id,
+          assignedUnits: officerObj.assignedUnits
+        };
+        completeLoginSuccess();
+        return;
+      }
 
+      alertBox.innerText = "Tên đăng nhập hoặc mật khẩu không chính xác!";
+      alertBox.classList.remove('hidden');
+    }
+
+    function completeLoginSuccess() {
       document.getElementById('loginScreen').classList.add('hidden');
       setupUserSessionView();
       showToast(`Xin chào ${currentUser.unitName}!`);
     }
 
+    // YÊU CẦU 3: THIẾT LẬP GIAO DIỆN PHÂN QUYỀN TINH GỌN (CHỈ 1 NÚT QUẢN TRỊ TRUNG TÂM)
     function setupUserSessionView() {
       const headerTitle = document.getElementById('headerSubTitle');
       const adminToolbar = document.getElementById('adminToolbar');
-      const btnAdminAccounts = document.getElementById('btnAdminAccounts');
-      const btnOfficerConfig = document.getElementById('btnOfficerConfig');
+      const btnUnifiedAdmin = document.getElementById('btnUnifiedAdmin');
       const officerFilter = document.getElementById('officerFilter');
       const rankSortButtons = document.getElementById('rankSortButtons');
       const reportRankingSubtitle = document.getElementById('reportRankingSubtitle');
       const colLoanRangeFilter = document.getElementById('colLoanRangeFilter');
-      const btnBulkTCT = document.getElementById('btnBulkTCT');
-
       const bulkGroupTCT = document.getElementById('bulkGroupTCT');
-      const btnOnlineConfig = document.getElementById('btnOnlineConfig');
       const bulkGroupUnit = document.getElementById('bulkGroupUnit');
 
       if (currentUser.role === 'ADMIN') {
-        headerTitle.innerHTML = `<b class="text-amber-400">TỔNG CÔNG TY</b> | Quản lý toàn mạng lưới (52 đơn vị)`;
+        headerTitle.innerHTML = `<b class="text-amber-400">TỔNG CÔNG TY (Layer 1)</b> | Toàn quyền điều hành toàn mạng lưới`;
         adminToolbar.classList.remove('hidden');
-        btnAdminAccounts.classList.remove('hidden');
-        btnOfficerConfig.classList.remove('hidden');
-        btnOnlineConfig.classList.remove('hidden');
-        btnOnlineConfig.classList.add('flex');
+        btnUnifiedAdmin.classList.remove('hidden');
+        btnUnifiedAdmin.classList.add('flex');
         officerFilter.disabled = false;
         rankSortButtons.classList.remove('hidden');
         reportRankingSubtitle.innerText = "Thống kê so sánh toàn bộ các đơn vị trên toàn mạng lưới";
         colLoanRangeFilter.classList.remove('hidden');
-        // YÊU CẦU 1: Tài khoản TCT CHỈ đổi trạng thái của TCT (Gửi CQT / Đảo về Chưa gửi), ẩn các nút CQT/NVKD
+
         bulkGroupTCT.classList.remove('hidden');
         bulkGroupTCT.classList.add('flex');
         bulkGroupUnit.classList.add('hidden');
         bulkGroupUnit.classList.remove('flex');
-      } else {
-        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName}</b> (Mã: ${currentUser.unitCode}) | Phân quyền đơn vị`;
+      } else if (currentUser.role === 'OFFICER') {
+        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName} (Layer 2 - Chuyên quản)</b> | Phụ trách ${currentUser.assignedUnits.length} đơn vị`;
         adminToolbar.classList.add('hidden');
-        btnAdminAccounts.classList.add('hidden');
-        btnOfficerConfig.classList.add('hidden');
-        btnOnlineConfig.classList.add('hidden');
-        btnOnlineConfig.classList.remove('flex');
+        btnUnifiedAdmin.classList.add('hidden');
+        btnUnifiedAdmin.classList.remove('flex');
+        officerFilter.disabled = true;
+        rankSortButtons.classList.remove('hidden');
+        reportRankingSubtitle.innerText = `Thống kê trong phạm vi địa bàn chuyên quản phụ trách`;
+        colLoanRangeFilter.classList.remove('hidden');
+
+        bulkGroupTCT.classList.add('hidden');
+        bulkGroupTCT.classList.remove('flex');
+        bulkGroupUnit.classList.remove('hidden');
+        bulkGroupUnit.classList.add('flex');
+      } else {
+        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName} (Layer 3 - Đơn vị)</b> | Phân quyền tác nghiệp tỉnh`;
+        adminToolbar.classList.add('hidden');
+        btnUnifiedAdmin.classList.add('hidden');
+        btnUnifiedAdmin.classList.remove('flex');
         officerFilter.disabled = true;
         rankSortButtons.classList.add('hidden');
         reportRankingSubtitle.innerText = `Báo cáo số liệu nội bộ đơn vị ${currentUser.unitName}`;
         colLoanRangeFilter.classList.add('hidden');
-        // YÊU CẦU 1: Tài khoản Đơn vị chỉ thấy thao tác CQT và NVKD (ẩn nhóm TCT)
+
         bulkGroupTCT.classList.add('hidden');
         bulkGroupTCT.classList.remove('flex');
         bulkGroupUnit.classList.remove('hidden');
@@ -2721,6 +1199,9 @@
         opt.textContent = `${off.name} (${off.assignedUnits.length} đơn vị)`;
         select.appendChild(opt);
       });
+      if (currentUser && currentUser.role === 'OFFICER') {
+        select.value = currentUser.officerId;
+      }
     }
 
     function onOfficerChanged() {
@@ -2750,6 +1231,19 @@
           select.appendChild(opt);
         });
         select.disabled = false;
+      } else if (currentUser.role === 'OFFICER') {
+        select.innerHTML = '<option value="ALL">-- Tất cả đơn vị phụ trách --</option>';
+        const assignedSet = new Set(currentUser.assignedUnits);
+        const unitsToShow = UNIT_DEFINITIONS.filter(u => assignedSet.has(u.code));
+
+        unitsToShow.forEach(u => {
+          const count = provinceLoanCounts[u.name] || 0;
+          const opt = document.createElement('option');
+          opt.value = u.name;
+          opt.textContent = `${u.name} (${count} khoản)`;
+          select.appendChild(opt);
+        });
+        select.disabled = false;
       } else {
         const count = provinceLoanCounts[currentUser.unitName] || 0;
         const opt = document.createElement('option');
@@ -2760,7 +1254,7 @@
       }
     }
 
-    // BỘ LỌC
+    // BỘ LỌC DỮ LIỆU
     function applyFilters() {
       const officerF = document.getElementById('officerFilter').value;
       const provF = document.getElementById('provinceFilter').value;
@@ -2770,7 +1264,9 @@
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
 
       let activeOfficerUnitCodes = null;
-      if (officerF !== 'ALL') {
+      if (currentUser.role === 'OFFICER') {
+        activeOfficerUnitCodes = new Set(currentUser.assignedUnits);
+      } else if (officerF !== 'ALL') {
         const off = officerList.find(o => o.id === officerF);
         if (off) activeOfficerUnitCodes = new Set(off.assignedUnits);
       }
@@ -2786,8 +1282,7 @@
         if (activeOfficerUnitCodes && !activeOfficerUnitCodes.has(d.unitCode)) return false;
         if (provF !== 'ALL' && !d.province.includes(provF) && !provF.includes(d.province)) return false;
 
-        // Chỉ áp dụng filter số khoản nếu là Admin TCT
-        if (currentUser.role === 'ADMIN') {
+        if (currentUser.role !== 'UNIT') {
           const provCount = provinceLoanCounts[d.province] || 0;
           if (rangeF === '1-10' && (provCount < 1 || provCount > 10)) return false;
           if (rangeF === '11-20' && (provCount < 11 || provCount > 20)) return false;
@@ -2852,7 +1347,7 @@
       document.getElementById('settledCountBadge').innerText = settledLoansList.length;
     }
 
-    // TICK CHỌN NHIỀU KHOẢN VAY
+    // TICK CHỌN NHIỀU KHOẢN
     function toggleLoanSelection(contractId, checked) {
       if (checked) selectedContractIds.add(contractId);
       else selectedContractIds.delete(contractId);
@@ -2868,6 +1363,13 @@
       updateSelectionSummary();
     }
 
+    function clearAllSelectedLoans() {
+      selectedContractIds.clear();
+      renderTable(currentFilteredData);
+      updateSelectionSummary();
+      showToast("Đã bỏ chọn tất cả các khoản vay!");
+    }
+
     function updateSelectionSummary() {
       const count = selectedContractIds.size;
       document.getElementById('selectedLoanCount').innerText = count;
@@ -2880,28 +1382,19 @@
       }
     }
 
-    // HÀM BỎ TICK TẤT CẢ KHI TICK NHẦM
-    function clearAllSelectedLoans() {
-      selectedContractIds.clear();
-      renderTable(currentFilteredData);
-      updateSelectionSummary();
-      showToast("Đã bỏ chọn tất cả các khoản vay!");
-    }
-
-    // YÊU CẦU 1 & 2: ĐỔI TRẠNG THÁI HÀNG LOẠT VÀ ĐẢO LẠI TRẠNG THÁI (KÈM KIỂM SOÁT PHÂN QUYỀN CHẶT CHẼ)
+    // ĐỔI TRẠNG THÁI HÀNG LOẠT
     function applyBulkStatusUpdate(field, value) {
       if (selectedContractIds.size === 0) {
         alert("Vui lòng tick chọn ít nhất 1 khoản vay ở cột đầu tiên trước khi thực hiện!");
         return;
       }
 
-      // YÊU CẦU 1: Kiểm tra phân quyền nghiệp vụ nghiêm ngặt
       if (field === 'tctStatus' && currentUser.role !== 'ADMIN') {
         alert("Chỉ tài khoản Tổng Công Ty mới có quyền cập nhật trạng thái TCT gửi CQT!");
         return;
       }
       if ((field === 'cqtStatus' || field === 'nvkdStatus') && currentUser.role === 'ADMIN') {
-        alert("Tổng Công Ty chỉ cập nhật trạng thái của TCT gửi tới CQT. Không can thiệp đổi trạng thái CQT và NVKD thay cho cơ sở!");
+        alert("Tổng Công Ty chỉ cập nhật trạng thái TCT gửi tới CQT. Không can thiệp đổi trạng thái CQT và NVKD thay cho cơ sở!");
         return;
       }
 
@@ -2911,13 +1404,11 @@
 
       rawDataset.forEach(item => {
         if (selectedContractIds.has(item.contractId)) {
-          // XỬ LÝ ĐẢO TRẠNG THÁI HOẶC CHUYỂN TRẠNG THÁI MỚI
           if (field === 'tctStatus') {
             if (value === 'DA_GUI') {
               item.status.tctStatus = 'DA_GUI';
               if (!item.status.tctTime) item.status.tctTime = timeStr;
             } else {
-              // YÊU CẦU 2: Đảo về "Chưa gửi" khi tick nhầm -> Xóa mốc giờ và cascade các cấp dưới về Chưa gửi
               item.status.tctStatus = 'CHUA_GUI';
               item.status.tctTime = '';
               item.status.cqtStatus = 'CHUA_GUI';
@@ -2928,14 +1419,10 @@
           } 
           else if (field === 'cqtStatus') {
             if (value === 'DA_GUI') {
-              // Điều kiện: TCT phải gửi trước thì CQT mới gửi được
-              if (item.status.tctStatus !== 'DA_GUI') {
-                return; // Bỏ qua nếu TCT chưa gửi
-              }
+              if (item.status.tctStatus !== 'DA_GUI') return;
               item.status.cqtStatus = 'DA_GUI';
               if (!item.status.cqtTime) item.status.cqtTime = timeStr;
             } else {
-              // Đảo về Chưa gửi -> Xóa mốc giờ CQT và kéo NVKD về Chưa nhắn
               item.status.cqtStatus = 'CHUA_GUI';
               item.status.cqtTime = '';
               item.status.nvkdStatus = 'CHUA_NHAN';
@@ -2944,14 +1431,10 @@
           } 
           else if (field === 'nvkdStatus') {
             if (value === 'DA_NHAN') {
-              // Điều kiện: CQT phải gửi cho NVKD trước
-              if (item.status.cqtStatus !== 'DA_GUI') {
-                return; // Bỏ qua nếu CQT chưa gửi
-              }
+              if (item.status.cqtStatus !== 'DA_GUI') return;
               item.status.nvkdStatus = 'DA_NHAN';
               if (!item.status.nvkdTime) item.status.nvkdTime = timeStr;
             } else {
-              // Đảo về Chưa nhắn
               item.status.nvkdStatus = 'CHUA_NHAN';
               item.status.nvkdTime = '';
             }
@@ -2978,7 +1461,38 @@
       showToast(`Đã ${actionDesc} thành công cho ${updatedCount} khoản nợ!`);
     }
 
-    // YÊU CẦU 1: BẢNG DỮ LIỆU THIẾT KẾ CO GỌN VỪA TRANG 100%
+    // LƯU GHI CHÚ
+    function saveSingleLoanNote(contractId) {
+      const inputEl = document.getElementById(`noteInput_${contractId}`);
+      if (!inputEl) return;
+      const noteVal = inputEl.value.trim();
+
+      const item = rawDataset.find(d => d.contractId === contractId);
+      if (item) {
+        item.status.note = noteVal;
+        const timeStr = getNowFormatted();
+        item.status.lastUpdated = `${timeStr} (${currentUser.unitName})`;
+
+        saveLocalCache();
+        if (isFirebaseActive && firebaseDb) {
+          firebaseDb.ref(`vnpost_loans_data/${contractId}`).set(item);
+        }
+
+        const btnSave = document.getElementById(`btnSaveNote_${contractId}`);
+        if (btnSave) {
+          btnSave.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> Đã lưu';
+          btnSave.className = "px-2 py-0.5 bg-emerald-700 text-white rounded text-[9px] font-bold transition flex items-center gap-1 shadow-sm";
+          setTimeout(() => {
+            btnSave.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu';
+            btnSave.className = "px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[9px] font-semibold transition flex items-center gap-1 shadow-sm";
+          }, 2500);
+        }
+
+        showToast(`Đã lưu ghi chú hợp đồng ${contractId}!`);
+      }
+    }
+
+    // RENDER BẢNG DỮ LIỆU CHÍNH
     function renderTable(data) {
       const tbody = document.getElementById('tableBody');
       tbody.innerHTML = '';
@@ -3005,6 +1519,10 @@
         const canEditTCT = (currentUser.role === 'ADMIN');
         const canEditCQT = (currentUser.role === 'ADMIN') || isTCTSent;
         const canEditNVKD = (currentUser.role === 'ADMIN') || isCQTSent;
+
+        // Cập nhật lại bản tin nhắc nợ đảm bảo đầy đủ SĐT KH và theo đúng kịch bản cảnh báo số ngày nợ
+        const currentReminder = buildReminderMessage(item.customerName, item.customerPhone, item.contractId, item.overdueDays, item.outstandingDue, item.staffName, item.staffCode, item.province);
+        item.reminderMsg = currentReminder;
 
         tr.innerHTML = `
           <!-- 1. Checkbox -->
@@ -3039,7 +1557,7 @@
 
           <!-- 6. Quá hạn -->
           <td class="p-1.5 text-center">
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${item.overdueDays <= 30 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${item.overdueDays <= 10 ? 'bg-emerald-100 text-emerald-700' : (item.overdueDays <= 30 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-700')}">
               ${item.overdueDays} ngày
             </span>
           </td>
@@ -3054,11 +1572,11 @@
             </div>
           </td>
 
-          <!-- 8. Bản tin nhắc nợ (Gọn gàng + nút copy nhanh) -->
+          <!-- 8. Bản tin nhắc nợ (Đủ Tên & SĐT của cả KH và NVKD) -->
           <td class="p-1.5">
             <div class="relative group bg-slate-50 p-1.5 rounded border border-slate-200">
-              <div class="text-[10px] text-slate-600 line-clamp-2 leading-relaxed" title="${item.reminderMsg}">
-                ${item.reminderMsg}
+              <div class="text-[10px] text-slate-600 line-clamp-2 leading-relaxed" title="${currentReminder}">
+                ${currentReminder}
               </div>
               <button onclick="copySingleReminder('${item.contractId}')" class="mt-1 text-[9px] text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1">
                 <i class="fa-solid fa-copy"></i> Chép bản tin
@@ -3066,16 +1584,14 @@
             </div>
           </td>
 
-          <!-- 9. Cột Đôn Đốc Liên Hoàn 3 Cấp KÈM THỜI GIAN RIÊNG TỪNG LAYER -->
+          <!-- 9. Cột Đôn Đốc 3 Cấp Kèm NÚT LƯU GHI CHÚ -->
           <td class="p-1.5 bg-indigo-50/50 border-l border-slate-200">
             <div class="space-y-1">
-              <!-- Hàng 3 Layer: TCT | CQT | NVKD kèm mốc thời gian riêng từng layer -->
               <div class="grid grid-cols-3 gap-1 text-[9px]">
-                <!-- Layer 1: TCT -->
                 <div>
                   <div class="flex items-center justify-between font-bold text-indigo-950 mb-0.5">
                     <span>TCT:</span>
-                    <span class="text-[8px] text-slate-400 font-normal truncate" title="Giờ TCT gửi">${st.tctTime || ''}</span>
+                    <span class="text-[8px] text-slate-400 font-normal truncate">${st.tctTime || ''}</span>
                   </div>
                   <select ${!canEditTCT ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'tctStatus', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] ${isTCTSent ? 'text-emerald-700 font-bold border-emerald-400' : 'text-slate-600'}">
                     <option value="CHUA_GUI" ${st.tctStatus === 'CHUA_GUI' ? 'selected' : ''}>Chưa gửi</option>
@@ -3083,11 +1599,10 @@
                   </select>
                 </div>
 
-                <!-- Layer 2: CQT -->
                 <div>
                   <div class="flex items-center justify-between font-bold ${canEditCQT ? 'text-blue-950' : 'text-slate-400'} mb-0.5">
                     <span>CQT:</span>
-                    <span class="text-[8px] text-slate-400 font-normal truncate" title="Giờ CQT gửi">${st.cqtTime || ''}</span>
+                    <span class="text-[8px] text-slate-400 font-normal truncate">${st.cqtTime || ''}</span>
                   </div>
                   <select ${!canEditCQT ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'cqtStatus', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] ${st.cqtStatus === 'DA_GUI' ? 'text-blue-700 font-bold border-blue-400' : 'text-slate-600'}">
                     <option value="CHUA_GUI" ${st.cqtStatus === 'CHUA_GUI' ? 'selected' : ''}>Chưa gửi</option>
@@ -3095,11 +1610,10 @@
                   </select>
                 </div>
 
-                <!-- Layer 3: NVKD -->
                 <div>
                   <div class="flex items-center justify-between font-bold ${canEditNVKD ? 'text-emerald-950' : 'text-slate-400'} mb-0.5">
                     <span>NVKD:</span>
-                    <span class="text-[8px] text-slate-400 font-normal truncate" title="Giờ NVKD nhắn">${st.nvkdTime || ''}</span>
+                    <span class="text-[8px] text-slate-400 font-normal truncate">${st.nvkdTime || ''}</span>
                   </div>
                   <select ${!canEditNVKD ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'nvkdStatus', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] ${st.nvkdStatus === 'DA_NHAN' ? 'text-emerald-700 font-bold border-emerald-400' : 'text-slate-600'}">
                     <option value="CHUA_NHAN" ${st.nvkdStatus === 'CHUA_NHAN' ? 'selected' : ''}>Chưa nhắn</option>
@@ -3108,19 +1622,29 @@
                 </div>
               </div>
 
-              <!-- Phản hồi khách hàng & Ghi chú -->
-              <div class="grid grid-cols-2 gap-1 pt-0.5">
-                <select ${!canEditNVKD ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'feedback', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] truncate ${st.feedback === 'TIEU_CUC' ? 'border-rose-500 text-rose-700 font-bold bg-rose-50' : 'text-slate-700'}">
-                  <option value="CHUA_LIEN_HE" ${st.feedback === 'CHUA_LIEN_HE' ? 'selected' : ''}>Chưa có phản hồi</option>
-                  <option value="KHONG_NGHE" ${st.feedback === 'KHONG_NGHE' ? 'selected' : ''}>Không nghe / Thuê bao</option>
-                  <option value="DOI_SO" ${st.feedback === 'DOI_SO' ? 'selected' : ''}>Đã đổi số ĐT</option>
-                  <option value="HEN_TRA" ${st.feedback === 'HEN_TRA' ? 'selected' : ''}>Hẹn ngày thanh toán</option>
-                  <option value="DA_TRA" ${st.feedback === 'DA_TRA' ? 'selected' : ''}>Đã nộp tiền / Tra soát</option>
-                  <option value="TIEU_CUC" ${st.feedback === 'TIEU_CUC' ? 'selected' : ''}>Thách thức / Thóa mạ</option>
-                  <option value="KHAC" ${st.feedback === 'KHAC' ? 'selected' : ''}>Khác</option>
-                </select>
+              <!-- Phản hồi khách hàng & Khối Ghi chú kèm nút LƯU -->
+              <div class="grid grid-cols-12 gap-1 pt-0.5 items-center">
+                <div class="col-span-5">
+                  <select ${!canEditNVKD ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'feedback', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] truncate ${st.feedback === 'TIEU_CUC' ? 'border-rose-500 text-rose-700 font-bold bg-rose-50' : 'text-slate-700'}">
+                    <option value="CHUA_LIEN_HE" ${st.feedback === 'CHUA_LIEN_HE' ? 'selected' : ''}>Chưa có phản hồi</option>
+                    <option value="KHONG_NGHE" ${st.feedback === 'KHONG_NGHE' ? 'selected' : ''}>Không nghe / Thuê bao</option>
+                    <option value="DOI_SO" ${st.feedback === 'DOI_SO' ? 'selected' : ''}>Đã đổi số ĐT</option>
+                    <option value="HEN_TRA" ${st.feedback === 'HEN_TRA' ? 'selected' : ''}>Hẹn ngày thanh toán</option>
+                    <option value="DA_TRA" ${st.feedback === 'DA_TRA' ? 'selected' : ''}>Đã nộp tiền / Tra soát</option>
+                    <option value="TIEU_CUC" ${st.feedback === 'TIEU_CUC' ? 'selected' : ''}>Thách thức / Thóa mạ</option>
+                    <option value="KHAC" ${st.feedback === 'KHAC' ? 'selected' : ''}>Khác</option>
+                  </select>
+                </div>
 
-                <input type="text" ${!canEditNVKD ? 'disabled' : ''} placeholder="${canEditNVKD ? 'Ghi chú...' : 'Khóa'}" value="${st.note || ''}" onchange="handleCascadeUpdate('${item.contractId}', 'note', this.value)" class="w-full bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] truncate focus:outline-indigo-600">
+                <div class="col-span-5">
+                  <input type="text" id="noteInput_${item.contractId}" ${!canEditNVKD ? 'disabled' : ''} placeholder="${canEditNVKD ? 'Ghi chú...' : 'Khóa'}" value="${st.note || ''}" class="w-full bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] truncate focus:outline-indigo-600">
+                </div>
+
+                <div class="col-span-2 text-right">
+                  <button id="btnSaveNote_${item.contractId}" onclick="saveSingleLoanNote('${item.contractId}')" ${!canEditNVKD ? 'disabled' : ''} class="w-full py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[9px] font-semibold transition flex items-center justify-center gap-0.5 shadow-sm" title="Lưu ghi chú">
+                    <i class="fa-solid fa-floppy-disk text-[8px]"></i> Lưu
+                  </button>
+                </div>
               </div>
             </div>
           </td>
@@ -3129,14 +1653,13 @@
       }
     }
 
-    // YÊU CẦU 3.1: CẬP NHẬT TRẠNG THÁI LIÊN HOÀN VÀ GHI MỐC THỜI GIAN RIÊNG CHO TỪNG LAYER
+    // CẬP NHẬT TRẠNG THÁI LIÊN HOÀN
     function handleCascadeUpdate(contractId, field, value) {
       const timeStr = getNowFormatted();
       const item = rawDataset.find(d => d.contractId === contractId);
       if (item) {
         item.status[field] = value;
 
-        // Lưu thời gian riêng cho từng layer tương ứng
         if (field === 'tctStatus') {
           if (value === 'DA_GUI') item.status.tctTime = timeStr;
           else {
@@ -3187,18 +1710,11 @@
       }
 
       const selectedList = rawDataset.filter(d => selectedContractIds.has(d.contractId));
-      let text = `=== DANH SÁCH ${selectedList.length} BẢN TIN ĐÔN ĐỐC ĐÃ CHỌN (${new Date().toLocaleDateString('vi-VN')}) ===
-
-`;
+      let text = `=== DANH SÁCH ${selectedList.length} BẢN TIN ĐÔN ĐỐC ĐÃ CHỌN (${new Date().toLocaleDateString('vi-VN')}) ===\n\n`;
       selectedList.forEach((item, idx) => {
-        text += `[Bản tin ${idx + 1}] KH: ${item.customerName} - HĐ: ${item.contractId} - SĐT: ${item.customerPhone}
-`;
-        text += `NVKD phụ trách: ${item.staffName || '---'} (SĐT: ${item.staffCode || '---'})
-`;
-        text += `Nội dung gửi: "${item.reminderMsg}"
-`;
-        text += `------------------------------------------------------------
-`;
+        text += `[Bản tin ${idx + 1}] KH: ${item.customerName} - HĐ: ${item.contractId} - SĐT: ${item.customerPhone || '---'}\n`;
+        text += `Nội dung gửi:\n"${item.reminderMsg}"\n`;
+        text += `------------------------------------------------------------\n`;
       });
 
       navigator.clipboard.writeText(text).then(() => {
@@ -3212,18 +1728,12 @@
         return;
       }
 
-      let text = `=== BẢN TIN ĐÔN ĐỐC TOÀN BỘ ĐƠN VỊ HIỆN TẠI (${new Date().toLocaleDateString('vi-VN')}) ===
-`;
-      text += `Tổng số bản tin: ${currentFilteredData.length} khoản
-
-`;
+      let text = `=== BẢN TIN ĐÔN ĐỐC TOÀN BỘ ĐƠN VỊ HIỆN TẠI (${new Date().toLocaleDateString('vi-VN')}) ===\n`;
+      text += `Tổng số bản tin: ${currentFilteredData.length} khoản\n\n`;
       currentFilteredData.forEach((item, idx) => {
-        text += `[${idx + 1}] KH: ${item.customerName} - HĐ: ${item.contractId} - SĐT: ${item.customerPhone}
-`;
-        text += `Nội dung: "${item.reminderMsg}"
-`;
-        text += `------------------------------------------------------------
-`;
+        text += `[${idx + 1}] KH: ${item.customerName} - HĐ: ${item.contractId} - SĐT: ${item.customerPhone || '---'}\n`;
+        text += `Nội dung: "${item.reminderMsg}"\n`;
+        text += `------------------------------------------------------------\n`;
       });
 
       navigator.clipboard.writeText(text).then(() => {
@@ -3231,101 +1741,23 @@
       });
     }
 
-    // MODAL CẤU HÌNH CHUYÊN QUẢN
-    function openOfficerModal() {
-      document.getElementById('officerConfigModal').classList.remove('hidden');
-      document.getElementById('officerCountSelect').value = officerList.length;
-      renderOfficerSetupForm();
-    }
-    function closeOfficerModal() {
-      document.getElementById('officerConfigModal').classList.add('hidden');
-    }
-
-    function onOfficerCountChange(newCount) {
-      const count = parseInt(newCount);
-      while (officerList.length < count) {
-        const nextIdx = officerList.length + 1;
-        officerList.push({ id: `CQ${nextIdx}`, name: `Chuyên quản ${nextIdx}`, assignedUnits: [] });
+    // XÓA DỮ LIỆU CẦN MẬT KHẨU 123456
+    function promptDeleteAllData() {
+      if (currentUser.role !== 'ADMIN') {
+        alert("Chỉ tài khoản Tổng Công Ty mới có quyền xóa dữ liệu nạp!");
+        return;
       }
-      if (officerList.length > count) {
-        officerList = officerList.slice(0, count);
+
+      const confirmPass = prompt("XÁC NHẬN BẢO MẬT: Nhập mật khẩu quản trị để xóa toàn bộ dữ liệu nạp:");
+      if (confirmPass === null) return;
+      if (confirmPass !== "123456") {
+        alert("Mật khẩu không chính xác! Thao tác xóa dữ liệu bị hủy bỏ.");
+        return;
       }
-      renderOfficerSetupForm();
-    }
 
-    function renderOfficerSetupForm() {
-      const container = document.getElementById('officerListContainer');
-      container.innerHTML = '';
-
-      officerList.forEach((off, idx) => {
-        const box = document.createElement('div');
-        box.className = "border border-slate-200 rounded-xl p-2.5 bg-slate-50 space-y-1.5";
-        
-        let unitsCheckboxesHtml = '';
-        UNIT_DEFINITIONS.forEach(u => {
-          const isChecked = off.assignedUnits.includes(u.code);
-          unitsCheckboxesHtml += `
-            <label class="flex items-center gap-1.5 text-[11px] bg-white p-1 rounded border border-slate-200 cursor-pointer hover:bg-indigo-50">
-              <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleUnitForOfficer('${off.id}', '${u.code}', this.checked)" class="rounded text-indigo-600">
-              <span class="truncate">${u.name} <b class="text-slate-400 font-mono">(${u.code})</b></span>
-            </label>
-          `;
-        });
-
-        box.innerHTML = `
-          <div class="flex items-center justify-between gap-2 border-b border-slate-200 pb-1.5">
-            <div class="flex items-center gap-1.5 flex-1">
-              <span class="w-5 h-5 rounded-full bg-indigo-900 text-amber-300 font-bold flex items-center justify-center text-[10px]">${idx + 1}</span>
-              <input type="text" value="${off.name}" onchange="updateOfficerName('${off.id}', this.value)" class="text-xs font-bold text-indigo-950 p-1 bg-white border border-slate-300 rounded w-52">
-            </div>
-            <div class="text-[11px] text-slate-500">
-              Đã phân công: <b class="text-indigo-700" id="officerCountBadge_${off.id}">${off.assignedUnits.length}</b> tỉnh
-            </div>
-          </div>
-          <div>
-            <span class="text-[10px] font-bold text-slate-600 block mb-0.5">TICK CHỌN ĐỊA BÀN PHỤ TRÁCH:</span>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1 max-h-36 overflow-y-auto custom-scroll p-1 bg-white rounded border border-slate-100">
-              ${unitsCheckboxesHtml}
-            </div>
-          </div>
-        `;
-        container.appendChild(box);
-      });
-    }
-
-    function updateOfficerName(officerId, newName) {
-      const off = officerList.find(o => o.id === officerId);
-      if (off) off.name = newName.trim();
-    }
-
-    function toggleUnitForOfficer(officerId, unitCode, isChecked) {
-      const off = officerList.find(o => o.id === officerId);
-      if (!off) return;
-      if (isChecked) {
-        if (!off.assignedUnits.includes(unitCode)) off.assignedUnits.push(unitCode);
-      } else {
-        off.assignedUnits = off.assignedUnits.filter(c => c !== unitCode);
+      if (!confirm("CẢNH BÁO LẦN CUỐI: Toàn bộ dữ liệu các khoản nợ nạp hôm nay và lịch sử trạng thái sẽ bị xóa sạch.\nBạn có chắc chắn tiếp tục không?")) {
+        return;
       }
-      const badge = document.getElementById(`officerCountBadge_${officerId}`);
-      if (badge) badge.innerText = off.assignedUnits.length;
-    }
-
-    function saveOfficerConfig() {
-      localStorage.setItem(STORAGE_KEY_OFFICERS, JSON.stringify(officerList));
-      if (isFirebaseActive && firebaseDb) {
-        firebaseDb.ref('vnpost_officers').set(officerList);
-      }
-      closeOfficerModal();
-      initOfficerDropdown();
-      initProvinceDropdown();
-      applyFilters();
-      showToast("Đã lưu thành công cấu hình Chuyên quản!");
-    }
-
-    // XÓA DỮ LIỆU NẠP
-    function deleteAllLoadedData() {
-      if (currentUser.role !== 'ADMIN') return;
-      if (!confirm("CẢNH BÁO: Bạn có chắc chắn muốn xóa TOÀN BỘ dữ liệu các khoản nợ đã nạp trên hệ thống không?")) return;
 
       rawDataset = [];
       settledLoansList = [];
@@ -3346,10 +1778,10 @@
       document.getElementById('currentFileDateText').innerText = "Vui lòng liên hệ Admin TCT để nạp dữ liệu.";
 
       refreshAllUI();
-      showToast("Đã xóa sạch toàn bộ dữ liệu các khoản nợ!");
+      showToast("Đã xóa sạch toàn bộ dữ liệu nạp thành công!");
     }
 
-    // NẠP EXCEL
+    // NẠP DỮ LIỆU EXCEL TCT
     function handleAdminFileUpload(e) {
       if (currentUser.role !== 'ADMIN') return;
       const file = e.target.files[0];
@@ -3419,8 +1851,7 @@
           lastUpdated: ""
         };
 
-        let contactInfo = staffName && staffCode ? `Đ/c ${staffName} (SĐT: ${staffCode})` : (staffCode ? `NVKD (SĐT: ${staffCode})` : `Chuyên quản ${province}`);
-        const reminderMsg = `[BƯU ĐIỆN VIỆT NAM THÔNG BÁO] Kính gửi Quý khách ${customerName}, HĐ vay số ${contractId} đã quá hạn ${overdueDays} ngày. Số tiền quá hạn cần thanh toán: ${formatVND(outstandingDue)}. Chi tiết liên hệ: ${contactInfo}. Trân trọng!`;
+        const reminderMsg = buildReminderMessage(customerName, customerPhone, contractId, overdueDays, outstandingDue, staffName, staffCode, province);
 
         newDataset.push({
           contractId,
@@ -3478,78 +1909,10 @@
       showToast(`Đã import ${rawDataset.length} khoản nợ thành công!`);
     }
 
-    // NẠP DỮ LIỆU DEMO
-    function loadSampleData() {
-      const sampleNames = ["Nguyễn Văn An", "Trần Thị Mai", "Lê Hoàng Long", "Phạm Văn Đức", "Hoàng Thu Thảo", "Vũ Quốc Đạt", "Đỗ Minh Tuấn", "Bùi Hồng Nhung", "Đinh Hữu Phước", "Ngô Thanh Vân"];
-      const generated = [];
-      for (let i = 1; i <= 60; i++) {
-        const u = UNIT_DEFINITIONS[i % UNIT_DEFINITIONS.length];
-        const cid = "CAKECLVPO" + (25305300 + i);
-        const hasStaff = (i % 5 !== 0);
-        const hasPhone = (i % 7 !== 0);
-        const overdueDays = Math.floor(Math.random() * 90) + 5;
-        const outstandingDue = Math.floor(Math.random() * 25 + 2) * 1000000;
-        const totalDebt = outstandingDue * (Math.floor(Math.random() * 3) + 2);
-
-        generated.push({
-          contractId: cid,
-          customerName: sampleNames[i % sampleNames.length],
-          overdueDays: overdueDays,
-          province: u.name,
-          unitCode: u.code,
-          postOffice: "Bưu cục Trung tâm",
-          staffCode: hasPhone ? ("09" + Math.floor(10000000 + Math.random() * 90000000)) : "",
-          staffName: hasStaff ? ("NVKD " + (i % 12)) : "",
-          customerPhone: "09" + Math.floor(10000000 + Math.random() * 90000000),
-          outstandingDue: outstandingDue,
-          totalDebt: totalDebt,
-          reminderMsg: `[BƯU ĐIỆN VIỆT NAM THÔNG BÁO] Kính gửi Quý khách ${sampleNames[i % sampleNames.length]}, HĐ vay số ${cid} đã quá hạn ${overdueDays} ngày. Số tiền: ${formatVND(outstandingDue)}.`,
-          status: {
-            tctStatus: i % 2 === 0 ? "DA_GUI" : "CHUA_GUI",
-            tctTime: i % 2 === 0 ? "08:15 20/10" : "",
-            cqtStatus: i % 4 === 0 ? "DA_GUI" : "CHUA_GUI",
-            cqtTime: i % 4 === 0 ? "09:30 20/10" : "",
-            nvkdStatus: i % 6 === 0 ? "DA_NHAN" : "CHUA_NHAN",
-            nvkdTime: i % 6 === 0 ? "10:00 20/10" : "",
-            feedback: i % 8 === 0 ? "HEN_TRA" : (i % 15 === 0 ? "TIEU_CUC" : "CHUA_LIEN_HE"),
-            note: i % 15 === 0 ? "Khách khiếu nại cước" : "",
-            lastUpdated: ""
-          }
-        });
-      }
-
-      rawDataset = generated;
-      settledLoansList = [
-        { contractId: "CAKECLVPO099991", customerName: "Vũ Duy Hưng", province: "BĐT Hưng Yên", outstandingDue: 14500000, settledDate: "19/10/2026" }
-      ];
-
-      const meta = {
-        fileName: "Du_Lieu_Mau_He_Thong.xlsx",
-        importDate: new Date().toLocaleString('vi-VN'),
-        importedBy: "Quản trị viên Demo",
-        totalRows: rawDataset.length
-      };
-
-      saveLocalCache();
-      localStorage.setItem(STORAGE_KEY_META, JSON.stringify(meta));
-      if (isFirebaseActive && firebaseDb) {
-        const firebaseLoansObj = {};
-        rawDataset.forEach(item => { firebaseLoansObj[item.contractId] = item; });
-        firebaseDb.ref('vnpost_loans_data').set(firebaseLoansObj);
-        firebaseDb.ref('vnpost_metadata').set(meta);
-        firebaseDb.ref('vnpost_settled_loans').set(settledLoansList);
-      }
-
-      calculateLoanCountsPerProvince();
-      updateFileNotice(meta);
-      initProvinceDropdown();
-      refreshAllUI();
-      showToast("Đã nạp 60 bản ghi mẫu cho 52 đơn vị!");
-    }
-
     function refreshAllUI() {
       applyFilters();
       renderReports();
+      renderDailyRemindersManagement();
     }
 
     // ĐIỀU HƯỚNG 3 TABS CHÍNH
@@ -3561,7 +1924,6 @@
       const b2 = document.getElementById('tabBtn2');
       const b3 = document.getElementById('tabBtn3');
 
-      // Reset style tất cả các nút tab
       b1.className = "py-1.5 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 whitespace-nowrap";
       b2.className = "py-1.5 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 whitespace-nowrap";
       b3.className = "py-1.5 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 whitespace-nowrap";
@@ -3583,6 +1945,7 @@
       }
     }
 
+    // BÁO CÁO XẾP HẠNG
     let currentSortOrder = 'DESC';
     function renderUnitRanking(order) {
       currentSortOrder = order;
@@ -3590,7 +1953,13 @@
       document.getElementById('btnSortAsc').className = order === 'ASC' ? "text-xs px-2 py-1 rounded bg-indigo-600 text-white font-medium" : "text-xs px-2 py-1 rounded bg-slate-100 text-slate-700 font-medium";
 
       const unitMap = {};
-      const unitsList = (currentUser.role === 'ADMIN') ? UNIT_DEFINITIONS : UNIT_DEFINITIONS.filter(u => u.code === currentUser.unitCode || u.name === currentUser.unitName);
+      let unitsList = UNIT_DEFINITIONS;
+      if (currentUser.role === 'OFFICER') {
+        const assignedSet = new Set(currentUser.assignedUnits);
+        unitsList = UNIT_DEFINITIONS.filter(u => assignedSet.has(u.code));
+      } else if (currentUser.role === 'UNIT') {
+        unitsList = UNIT_DEFINITIONS.filter(u => u.code === currentUser.unitCode || u.name === currentUser.unitName);
+      }
 
       unitsList.forEach(u => {
         unitMap[u.name] = { name: u.name, code: u.code, count: 0, totalDue: 0, totalDebt: 0, cqtDone: 0, nvkdDone: 0 };
@@ -3600,6 +1969,8 @@
         if (currentUser.role === 'UNIT') {
           const matchUnit = d.province.includes(currentUser.unitName) || currentUser.unitName.includes(d.province) || (currentUser.unitCode && d.unitCode === currentUser.unitCode);
           if (!matchUnit) return;
+        } else if (currentUser.role === 'OFFICER') {
+          if (!currentUser.assignedUnits.includes(d.unitCode)) return;
         }
 
         const u = UNIT_DEFINITIONS.find(unit => d.province.includes(unit.name) || unit.name.includes(d.province));
@@ -3639,13 +2010,10 @@
 
     function renderReports() {
       renderUnitRanking(currentSortOrder);
+      const reportDataset = currentFilteredData;
 
-      const reportDataset = (currentUser.role === 'ADMIN') ? rawDataset : rawDataset.filter(d => {
-        return d.province.includes(currentUser.unitName) || currentUser.unitName.includes(d.province) || (currentUser.unitCode && d.unitCode === currentUser.unitCode);
-      });
-
-      document.getElementById('topStaffHeaderTitle').innerHTML = `<i class="fa-solid fa-user-tie text-blue-600"></i> TOP 20 NVKD CÓ NỢ QUÁ HẠN CAO NHẤT ${currentUser.role === 'UNIT' ? `(${currentUser.unitName})` : ''}`;
-      document.getElementById('unclaimedHeaderTitle').innerHTML = `<i class="fa-solid fa-user-xmark text-rose-500"></i> TOP 20 KHOẢN NỢ VÔ THỪA NHẬN ${currentUser.role === 'UNIT' ? `(${currentUser.unitName})` : ''}`;
+      document.getElementById('topStaffHeaderTitle').innerHTML = `<i class="fa-solid fa-user-tie text-blue-600"></i> TOP 20 NVKD CÓ NỢ QUÁ HẠN CAO NHẤT ${currentUser.role !== 'ADMIN' ? `(${currentUser.unitName})` : ''}`;
+      document.getElementById('unclaimedHeaderTitle').innerHTML = `<i class="fa-solid fa-user-xmark text-rose-500"></i> TOP 20 KHOẢN NỢ VÔ THỪA NHẬN ${currentUser.role !== 'ADMIN' ? `(${currentUser.unitName})` : ''}`;
 
       const staffMap = {};
       reportDataset.forEach(d => {
@@ -3714,15 +2082,437 @@
       });
     }
 
-    // QUẢN LÝ TÀI KHOẢN (ADMIN)
-    function openAccountsModal() {
-      document.getElementById('accountsModal').classList.remove('hidden');
-      renderAccountsTable();
+    // QUẢN TRỊ ĐÔN ĐỐC & PHẢN HỒI KH THEO NGÀY
+    function getDateString(d) {
+      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
     }
-    function closeAccountsModal() {
-      document.getElementById('accountsModal').classList.add('hidden');
+    function getShortDateString(d) {
+      return `${d.getDate()}/${d.getMonth() + 1}`;
+    }
+    function matchDateInTimeString(timeStr, targetDate) {
+      if (!timeStr) return false;
+      const fullDateStr = getDateString(targetDate);
+      const shortDateStr = getShortDateString(targetDate);
+      return timeStr.includes(fullDateStr) || timeStr.includes(shortDateStr);
     }
 
+    function renderDailyRemindersManagement() {
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+
+      const strToday = getDateString(today);
+      const strYesterday = getDateString(yesterday);
+
+      document.getElementById('lblTodayDate').innerText = strToday;
+      document.getElementById('lblYesterdayDate').innerText = strYesterday;
+
+      const dataset = currentFilteredData;
+
+      let tctToday = 0, tctYesterday = 0;
+      let cqtToday = 0, cqtYesterday = 0;
+      let nvkdToday = 0, nvkdYesterday = 0;
+
+      const feedbackCounts = {
+        'HEN_TRA': 0, 'DA_TRA': 0, 'KHONG_NGHE': 0, 'DOI_SO': 0, 'TIEU_CUC': 0, 'CHUA_LIEN_HE': 0, 'KHAC': 0
+      };
+
+      const unitMap = {};
+      let unitsList = UNIT_DEFINITIONS;
+      if (currentUser.role === 'OFFICER') {
+        const assignedSet = new Set(currentUser.assignedUnits);
+        unitsList = UNIT_DEFINITIONS.filter(u => assignedSet.has(u.code));
+      } else if (currentUser.role === 'UNIT') {
+        unitsList = UNIT_DEFINITIONS.filter(u => u.code === currentUser.unitCode || u.name === currentUser.unitName);
+      }
+
+      unitsList.forEach(u => {
+        unitMap[u.name] = {
+          name: u.name, code: u.code, totalLoans: 0,
+          tctToday: 0, tctYesterday: 0, cqtToday: 0, cqtYesterday: 0, nvkdToday: 0, nvkdYesterday: 0,
+          positiveCount: 0, riskCount: 0
+        };
+      });
+
+      dataset.forEach(item => {
+        const st = item.status;
+        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
+        const unitKey = u ? u.name : item.province;
+        if (!unitMap[unitKey]) {
+          unitMap[unitKey] = {
+            name: unitKey, code: item.unitCode || "---", totalLoans: 0,
+            tctToday: 0, tctYesterday: 0, cqtToday: 0, cqtYesterday: 0, nvkdToday: 0, nvkdYesterday: 0,
+            positiveCount: 0, riskCount: 0
+          };
+        }
+        unitMap[unitKey].totalLoans++;
+
+        if (st.tctStatus === 'DA_GUI') {
+          if (matchDateInTimeString(st.tctTime, today)) {
+            tctToday++; unitMap[unitKey].tctToday++;
+          } else if (matchDateInTimeString(st.tctTime, yesterday)) {
+            tctYesterday++; unitMap[unitKey].tctYesterday++;
+          } else if (!st.tctTime) {
+            tctToday++; unitMap[unitKey].tctToday++;
+          }
+        }
+
+        if (st.cqtStatus === 'DA_GUI') {
+          if (matchDateInTimeString(st.cqtTime, today)) {
+            cqtToday++; unitMap[unitKey].cqtToday++;
+          } else if (matchDateInTimeString(st.cqtTime, yesterday)) {
+            cqtYesterday++; unitMap[unitKey].cqtYesterday++;
+          }
+        }
+
+        if (st.nvkdStatus === 'DA_NHAN') {
+          if (matchDateInTimeString(st.nvkdTime, today)) {
+            nvkdToday++; unitMap[unitKey].nvkdToday++;
+          } else if (matchDateInTimeString(st.nvkdTime, yesterday)) {
+            nvkdYesterday++; unitMap[unitKey].nvkdYesterday++;
+          }
+        }
+
+        const fb = st.feedback || 'CHUA_LIEN_HE';
+        if (feedbackCounts[fb] !== undefined) feedbackCounts[fb]++;
+        else feedbackCounts['KHAC'] = (feedbackCounts['KHAC'] || 0) + 1;
+
+        if (fb === 'HEN_TRA' || fb === 'DA_TRA') unitMap[unitKey].positiveCount++;
+        if (fb === 'DOI_SO' || fb === 'TIEU_CUC') unitMap[unitKey].riskCount++;
+      });
+
+      document.getElementById('statTctToday').innerText = tctToday.toLocaleString('vi-VN');
+      document.getElementById('statTctYesterday').innerText = tctYesterday.toLocaleString('vi-VN');
+      const diffTctVal = tctToday - tctYesterday;
+      document.getElementById('diffTct').innerText = (diffTctVal >= 0 ? `+${diffTctVal}` : `${diffTctVal}`);
+      document.getElementById('diffTct').className = diffTctVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
+
+      document.getElementById('statCqtToday').innerText = cqtToday.toLocaleString('vi-VN');
+      document.getElementById('statCqtYesterday').innerText = cqtYesterday.toLocaleString('vi-VN');
+      const diffCqtVal = cqtToday - cqtYesterday;
+      document.getElementById('diffCqt').innerText = (diffCqtVal >= 0 ? `+${diffCqtVal}` : `${diffCqtVal}`);
+      document.getElementById('diffCqt').className = diffCqtVal >= 0 ? "text-blue-600 font-bold" : "text-rose-600 font-bold";
+
+      document.getElementById('statNvkdToday').innerText = nvkdToday.toLocaleString('vi-VN');
+      document.getElementById('statNvkdYesterday').innerText = nvkdYesterday.toLocaleString('vi-VN');
+      const diffNvkdVal = nvkdToday - nvkdYesterday;
+      document.getElementById('diffNvkd').innerText = (diffNvkdVal >= 0 ? `+${diffNvkdVal}` : `${diffNvkdVal}`);
+      document.getElementById('diffNvkd').className = diffNvkdVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
+
+      const totalDataset = dataset.length || 1;
+      ['HEN_TRA', 'DA_TRA', 'KHONG_NGHE', 'DOI_SO', 'TIEU_CUC', 'CHUA_LIEN_HE'].forEach(key => {
+        const cnt = feedbackCounts[key] || 0;
+        const pct = Math.round((cnt / totalDataset) * 100);
+        const countEl = document.getElementById(`fbCount_${key}`);
+        const pctEl = document.getElementById(`fbPct_${key}`);
+        if (countEl) countEl.innerText = cnt.toLocaleString('vi-VN');
+        if (pctEl) pctEl.innerText = `${pct}%`;
+      });
+
+      const tbody = document.getElementById('dailyRemindersTableBody');
+      tbody.innerHTML = '';
+      const listUnits = Object.values(unitMap).sort((a, b) => b.nvkdToday - a.nvkdToday || b.totalLoans - a.totalLoans);
+
+      listUnits.forEach((u, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition border-b border-slate-100 text-[11px]";
+        tr.innerHTML = `
+          <td class="p-1.5 text-center text-slate-400 font-medium">${idx + 1}</td>
+          <td class="p-1.5 truncate">
+            <span class="font-bold text-slate-800">${u.name}</span>
+            <span class="text-[9px] text-slate-400 font-mono ml-1">(${u.code})</span>
+          </td>
+          <td class="p-1.5 text-center font-bold">${u.totalLoans}</td>
+          <td class="p-1.5 text-center bg-indigo-50/30">
+            <span class="font-bold text-indigo-700">${u.tctToday}</span>
+            <span class="text-slate-300 mx-0.5">/</span>
+            <span class="text-slate-500">${u.tctYesterday}</span>
+          </td>
+          <td class="p-1.5 text-center bg-blue-50/30">
+            <span class="font-bold text-blue-700">${u.cqtToday}</span>
+            <span class="text-slate-300 mx-0.5">/</span>
+            <span class="text-slate-500">${u.cqtYesterday}</span>
+          </td>
+          <td class="p-1.5 text-center bg-emerald-50/30">
+            <span class="font-bold text-emerald-700">${u.nvkdToday}</span>
+            <span class="text-slate-300 mx-0.5">/</span>
+            <span class="text-slate-500">${u.nvkdYesterday}</span>
+          </td>
+          <td class="p-1.5 text-center font-semibold text-emerald-700">
+            ${u.positiveCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.positiveCount / u.totalLoans)*100) : 0}%)</span>
+          </td>
+          <td class="p-1.5 text-center font-semibold text-rose-700">
+            ${u.riskCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.riskCount / u.totalLoans)*100) : 0}%)</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // XUẤT EXCEL BÁO CÁO ĐÔN ĐỐC TOÀN QUỐC
+    function exportDailyRemindersReportExcel() {
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+      const strToday = getDateString(today);
+      const strYesterday = getDateString(yesterday);
+
+      const unitMap = {};
+      UNIT_DEFINITIONS.forEach(u => {
+        unitMap[u.name] = {
+          name: u.name, code: u.code, totalLoans: 0, totalDue: 0,
+          tctToday: 0, tctYesterday: 0, cqtToday: 0, cqtYesterday: 0, nvkdToday: 0, nvkdYesterday: 0,
+          henTra: 0, daTra: 0, thueBao: 0, doiSo: 0, tieuCuc: 0, chuaPhanHoi: 0
+        };
+      });
+
+      rawDataset.forEach(item => {
+        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
+        const k = u ? u.name : item.province;
+        if (!unitMap[k]) {
+          unitMap[k] = { name: k, code: item.unitCode || "---", totalLoans: 0, totalDue: 0, tctToday: 0, tctYesterday: 0, cqtToday: 0, cqtYesterday: 0, nvkdToday: 0, nvkdYesterday: 0, henTra: 0, daTra: 0, thueBao: 0, doiSo: 0, tieuCuc: 0, chuaPhanHoi: 0 };
+        }
+        unitMap[k].totalLoans++;
+        unitMap[k].totalDue += (item.outstandingDue || 0);
+
+        const st = item.status;
+        if (st.tctStatus === 'DA_GUI') {
+          if (matchDateInTimeString(st.tctTime, today) || !st.tctTime) unitMap[k].tctToday++;
+          else if (matchDateInTimeString(st.tctTime, yesterday)) unitMap[k].tctYesterday++;
+        }
+        if (st.cqtStatus === 'DA_GUI') {
+          if (matchDateInTimeString(st.cqtTime, today)) unitMap[k].cqtToday++;
+          else if (matchDateInTimeString(st.cqtTime, yesterday)) unitMap[k].cqtYesterday++;
+        }
+        if (st.nvkdStatus === 'DA_NHAN') {
+          if (matchDateInTimeString(st.nvkdTime, today)) unitMap[k].nvkdToday++;
+          else if (matchDateInTimeString(st.nvkdTime, yesterday)) unitMap[k].nvkdYesterday++;
+        }
+
+        const fb = st.feedback;
+        if (fb === 'HEN_TRA') unitMap[k].henTra++;
+        else if (fb === 'DA_TRA') unitMap[k].daTra++;
+        else if (fb === 'KHONG_NGHE') unitMap[k].thueBao++;
+        else if (fb === 'DOI_SO') unitMap[k].doiSo++;
+        else if (fb === 'TIEU_CUC') unitMap[k].tieuCuc++;
+        else unitMap[k].chuaPhanHoi++;
+      });
+
+      const summaryData = Object.values(unitMap).map((u, i) => ({
+        "STT": i + 1,
+        "Mã bưu điện": u.code,
+        "Tên Bưu điện tỉnh / TP": u.name,
+        "Tổng số khoản nợ": u.totalLoans,
+        "Tổng tiền cần thu (VNĐ)": u.totalDue,
+        [`TCT gửi CQT (Hôm nay ${strToday})`]: u.tctToday,
+        [`TCT gửi CQT (Hôm qua ${strYesterday})`]: u.tctYesterday,
+        [`CQT gửi NVKD (Hôm nay ${strToday})`]: u.cqtToday,
+        [`CQT gửi NVKD (Hôm qua ${strYesterday})`]: u.cqtYesterday,
+        [`NVKD nhắn tin KH (Hôm nay ${strToday})`]: u.nvkdToday,
+        [`NVKD nhắn tin KH (Hôm qua ${strYesterday})`]: u.nvkdYesterday,
+        "Khách hẹn ngày trả": u.henTra,
+        "Khách đã nộp / Tra soát": u.daTra,
+        "Thuê bao / Không nghe": u.thueBao,
+        "Khách đã đổi số ĐT": u.doiSo,
+        "Khách thách thức / Thóa mạ": u.tieuCuc,
+        "Chưa có phản hồi": u.chuaPhanHoi
+      }));
+
+      const detailFeedbackData = rawDataset.filter(d => d.status.feedback !== 'CHUA_LIEN_HE').map((d, idx) => ({
+        "STT": idx + 1,
+        "Đơn vị": d.province,
+        "Mã hợp đồng": d.contractId,
+        "Tên khách hàng": d.customerName,
+        "SĐT khách hàng": d.customerPhone,
+        "Tiền cần thu (VNĐ)": d.outstandingDue,
+        "Số ngày quá hạn": d.overdueDays,
+        "NVKD phụ trách": d.staffName,
+        "SĐT NVKD": d.staffCode,
+        "Thời gian NVKD gửi tin": d.status.nvkdTime || "",
+        "Phản hồi từ khách hàng": d.status.feedback,
+        "Ghi chú chi tiết trao đổi": d.status.note || "",
+        "Cập nhật lần cuối": d.status.lastUpdated || ""
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, wsSummary, "Tong_Hop_Don_Doc_3_Cap");
+      const wsDetail = XLSX.utils.json_to_sheet(detailFeedbackData);
+      XLSX.utils.book_append_sheet(wb, wsDetail, "Chi_Tiet_Phan_Hoi_KH");
+
+      XLSX.writeFile(wb, `Bao_Cao_Don_Doc_Va_Phan_Hoi_KH_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      showToast("Đã xuất báo cáo đôn đốc toàn quốc thành công!");
+    }
+
+    // ==================== YÊU CẦU 3: QUẢN TRỊ HỆ THỐNG TRUNG TÂM (UNIFIED ADMIN MODAL) ====================
+    function openUnifiedAdminModal() {
+      document.getElementById('unifiedAdminModal').classList.remove('hidden');
+      document.getElementById('officerCountSelect').value = officerList.length;
+      switchAdminModalTab('officers');
+    }
+
+    function closeUnifiedAdminModal() {
+      document.getElementById('unifiedAdminModal').classList.add('hidden');
+    }
+
+    function switchAdminModalTab(tab) {
+      const vOff = document.getElementById('adminModalViewOfficers');
+      const vUnits = document.getElementById('adminModalViewUnits');
+      const vOnline = document.getElementById('adminModalViewOnline');
+      const b1 = document.getElementById('adminTabBtn1');
+      const b2 = document.getElementById('adminTabBtn2');
+      const b3 = document.getElementById('adminTabBtn3');
+
+      b1.className = "py-2 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5";
+      b2.className = "py-2 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5";
+      b3.className = "py-2 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5";
+
+      vOff.classList.add('hidden');
+      vUnits.classList.add('hidden');
+      vOnline.classList.add('hidden');
+
+      if (tab === 'officers') {
+        vOff.classList.remove('hidden');
+        b1.className = "py-2 px-3 text-xs font-bold border-b-2 border-indigo-600 text-indigo-700 flex items-center gap-1.5";
+        renderOfficerSetupAndAccountsList();
+      } else if (tab === 'units') {
+        vUnits.classList.remove('hidden');
+        b2.className = "py-2 px-3 text-xs font-bold border-b-2 border-indigo-600 text-indigo-700 flex items-center gap-1.5";
+        renderAccountsTable();
+      } else if (tab === 'online') {
+        vOnline.classList.remove('hidden');
+        b3.className = "py-2 px-3 text-xs font-bold border-b-2 border-indigo-600 text-indigo-700 flex items-center gap-1.5";
+        document.getElementById('firebaseDbUrl').value = getActiveFirebaseUrl();
+      }
+    }
+
+    // TÍCH HỢP TAB 1: CẤU HÌNH & TÀI KHOẢN CHUYÊN QUẢN
+    function onOfficerCountChange(newCount) {
+      const count = parseInt(newCount);
+      while (officerList.length < count) {
+        const nextIdx = officerList.length + 1;
+        officerList.push({ id: `CQ${nextIdx}`, name: `Chuyên quản ${nextIdx}`, assignedUnits: [] });
+      }
+      if (officerList.length > count) {
+        officerList = officerList.slice(0, count);
+      }
+      renderOfficerSetupAndAccountsList();
+    }
+
+    function renderOfficerSetupAndAccountsList() {
+      const offAccounts = getStoredOfficerAccounts();
+      const container = document.getElementById('officerListContainer');
+      container.innerHTML = '';
+
+      officerList.forEach((off, idx) => {
+        const uName = off.id.toLowerCase();
+        const acc = offAccounts[uName] || { password: generate6DigitCode() };
+
+        let unitsCheckboxesHtml = '';
+        UNIT_DEFINITIONS.forEach(u => {
+          const isChecked = off.assignedUnits.includes(u.code);
+          unitsCheckboxesHtml += `
+            <label class="flex items-center gap-1.5 text-[11px] bg-white p-1 rounded border border-slate-200 cursor-pointer hover:bg-indigo-50">
+              <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleUnitForOfficer('${off.id}', '${u.code}', this.checked)" class="rounded text-indigo-600">
+              <span class="truncate">${u.name} <b class="text-slate-400 font-mono">(${u.code})</b></span>
+            </label>
+          `;
+        });
+
+        const box = document.createElement('div');
+        box.className = "border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2";
+        box.innerHTML = `
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-200 pb-2">
+            <div class="flex items-center gap-2 flex-1">
+              <span class="w-6 h-6 rounded-full bg-indigo-900 text-amber-300 font-bold flex items-center justify-center text-[10px]">${idx + 1}</span>
+              <input type="text" value="${off.name}" onchange="updateOfficerName('${off.id}', this.value)" class="text-xs font-bold text-indigo-950 p-1 bg-white border border-slate-300 rounded w-48" placeholder="Tên Chuyên quản">
+              <span class="text-xs text-slate-500 font-mono font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">User: ${uName}</span>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-600">Mật khẩu:</span>
+              <span id="passSpanOfficer_${uName}" class="font-mono font-bold text-blue-700 bg-white px-2 py-0.5 border border-slate-300 rounded text-xs">${acc.password}</span>
+              <button onclick="randomizeSingleOfficerPassword('${uName}')" class="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-900 rounded text-[10px]" title="Random 6 số"><i class="fa-solid fa-dice mr-0.5"></i>6 số</button>
+              <button onclick="editSingleOfficerPassword('${uName}')" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px]" title="Tự đặt"><i class="fa-solid fa-pen-to-square"></i></button>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-[10px] font-bold text-slate-600">TICK CHỌN CÁC ĐƠN VỊ PHỤ TRÁCH:</span>
+              <span class="text-[10px] text-slate-500">Đã gán: <b class="text-indigo-700" id="officerCountBadge_${off.id}">${off.assignedUnits.length}</b> tỉnh/thành</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1 max-h-36 overflow-y-auto custom-scroll p-1 bg-white rounded border border-slate-100">
+              ${unitsCheckboxesHtml}
+            </div>
+          </div>
+        `;
+        container.appendChild(box);
+      });
+    }
+
+    function updateOfficerName(officerId, newName) {
+      const off = officerList.find(o => o.id === officerId);
+      if (off) off.name = newName.trim();
+    }
+
+    function toggleUnitForOfficer(officerId, unitCode, isChecked) {
+      const off = officerList.find(o => o.id === officerId);
+      if (!off) return;
+      if (isChecked) {
+        if (!off.assignedUnits.includes(unitCode)) off.assignedUnits.push(unitCode);
+      } else {
+        off.assignedUnits = off.assignedUnits.filter(c => c !== unitCode);
+      }
+      const badge = document.getElementById(`officerCountBadge_${officerId}`);
+      if (badge) badge.innerText = off.assignedUnits.length;
+    }
+
+    function saveOfficerConfig() {
+      localStorage.setItem(STORAGE_KEY_OFFICERS, JSON.stringify(officerList));
+      if (isFirebaseActive && firebaseDb) {
+        firebaseDb.ref('vnpost_officers').set(officerList);
+      }
+      initOfficerDropdown();
+      initProvinceDropdown();
+      applyFilters();
+      showToast("Đã lưu thành công cấu hình & phân công Chuyên quản!");
+    }
+
+    function randomizeSingleOfficerPassword(uName) {
+      const offAccounts = getStoredOfficerAccounts();
+      const newPass = generate6DigitCode();
+      offAccounts[uName].password = newPass;
+      saveOfficerAccountsSync(offAccounts);
+      document.getElementById(`passSpanOfficer_${uName}`).innerText = newPass;
+      showToast(`Đã tạo MK mới cho Chuyên quản ${uName}: ${newPass}`);
+    }
+
+    function editSingleOfficerPassword(uName) {
+      const offAccounts = getStoredOfficerAccounts();
+      const current = offAccounts[uName].password;
+      const custom = prompt(`Nhập mật khẩu mới cho Chuyên quản ${uName}:`, current);
+      if (custom && custom.trim().length >= 4) {
+        offAccounts[uName].password = custom.trim();
+        saveOfficerAccountsSync(offAccounts);
+        document.getElementById(`passSpanOfficer_${uName}`).innerText = custom.trim();
+        showToast(`Đã cập nhật mật khẩu Chuyên quản ${uName}!`);
+      }
+    }
+
+    function randomizeAllOfficerPasswords() {
+      if (!confirm("Bạn có chắc chắn muốn random lại mật khẩu cho tất cả Chuyên quản không?")) return;
+      const offAccounts = getStoredOfficerAccounts();
+      officerList.forEach(off => {
+        const uName = off.id.toLowerCase();
+        offAccounts[uName].password = generate6DigitCode();
+      });
+      saveOfficerAccountsSync(offAccounts);
+      renderOfficerSetupAndAccountsList();
+      showToast("Đã random mật khẩu mới cho toàn bộ Chuyên quản!");
+    }
+
+    // TÍCH HỢP TAB 2: QUẢN TRỊ 52 ĐƠN VỊ
     function renderAccountsTable(filterText = '') {
       const accounts = getStoredAccounts();
       const tbody = document.getElementById('accountsTableBody');
@@ -3800,6 +2590,50 @@
       XLSX.writeFile(wb, `Danh_Sach_Tai_Khoan_52_Don_Vi_${new Date().toISOString().slice(0, 10)}.xlsx`);
     }
 
+    // TÍCH HỢP TAB 3: CẤU HÌNH ONLINE FIREBASE
+    function saveFirebaseConfigLocal() {
+      const url = document.getElementById('firebaseDbUrl').value.trim();
+      if (url) {
+        localStorage.setItem(STORAGE_KEY_FB_URL, url);
+        showToast("Đã lưu cấu hình Firebase trên trình duyệt này!");
+      } else {
+        localStorage.removeItem(STORAGE_KEY_FB_URL);
+        showToast("Đã xóa cấu hình Firebase cục bộ!");
+      }
+      setTimeout(() => location.reload(), 1000);
+    }
+
+    function publishConfiguredHtmlForOnline() {
+      const url = document.getElementById('firebaseDbUrl').value.trim();
+      if (!url) {
+        alert("Vui lòng nhập Firebase Database URL trước khi xuất bản!");
+        return;
+      }
+
+      localStorage.setItem(STORAGE_KEY_FB_URL, url);
+
+      let currentSource = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+      const regex = /const\s+EMBEDDED_FIREBASE_URL\s*=\s*["'].*?["'];/g;
+      const replacement = `const EMBEDDED_FIREBASE_URL = "${url}";`;
+      
+      if (regex.test(currentSource)) {
+        currentSource = currentSource.replace(regex, replacement);
+      } else {
+        currentSource = currentSource.replace('const STORAGE_KEY_FB_URL = "VNPOST_FIREBASE_URL";', `const STORAGE_KEY_FB_URL = "VNPOST_FIREBASE_URL";\n    const EMBEDDED_FIREBASE_URL = "${url}";`);
+      }
+
+      const blob = new Blob([currentSource], { type: "text/html;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "index.html";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      alert("HƯỚNG DẪN HOÀN TẤT:\n\n1. Hệ thống đã tải về file [index.html] có nhúng sẵn link Firebase Online.\n2. Bạn chỉ cần tải đè file [index.html] này lên GitHub repo [dieu-hanh-thu-hoi-no].\n3. Sau đó toàn bộ 52 đơn vị và Chuyên quản khi mở https://taichinhso.cloud sẽ TỰ ĐỘNG kết nối Online!");
+      setTimeout(() => location.reload(), 1500);
+    }
+
     // ĐỔI MẬT KHẨU CÁ NHÂN
     function openChangePassModal() { document.getElementById('changePassModal').classList.remove('hidden'); }
     function closeChangePassModal() { document.getElementById('changePassModal').classList.add('hidden'); }
@@ -3813,89 +2647,29 @@
         alert("Mật khẩu mới và xác nhận mật khẩu không khớp!");
         return;
       }
-      const accounts = getStoredAccounts();
-      const acc = accounts[currentUser.username];
-      if (acc.password !== cur) {
-        alert("Mật khẩu hiện tại không đúng!");
-        return;
+
+      if (currentUser.role === 'OFFICER') {
+        const offAccounts = getStoredOfficerAccounts();
+        const uLower = currentUser.username.toLowerCase();
+        if (offAccounts[uLower].password !== cur) {
+          alert("Mật khẩu hiện tại không đúng!");
+          return;
+        }
+        offAccounts[uLower].password = nw;
+        saveOfficerAccountsSync(offAccounts);
+      } else {
+        const accounts = getStoredAccounts();
+        const acc = accounts[currentUser.username];
+        if (acc.password !== cur) {
+          alert("Mật khẩu hiện tại không đúng!");
+          return;
+        }
+        acc.password = nw;
+        saveAccountsSync(accounts);
       }
 
-      acc.password = nw;
-      saveAccountsSync(accounts);
       closeChangePassModal();
       showToast("Đổi mật khẩu thành công!");
-    }
-
-    // CẤU HÌNH FIREBASE TẬP TRUNG TỰ ĐỘNG CHO 52 ĐƠN VỊ
-    // Biến cấu hình nhúng tĩnh (khi Admin TCT tải file về sẽ tự điền vào đây):
-    const EMBEDDED_FIREBASE_URL = "";
-
-    function getActiveFirebaseUrl() {
-      // Ưu tiên 1: Giá trị được lưu trong LocalStorage (nếu Admin đã từng cấu hình trên trình duyệt này)
-      const stored = localStorage.getItem(STORAGE_KEY_FB_URL);
-      if (stored && stored.trim()) return stored.trim();
-      // Ưu tiên 2: Giá trị nhúng sẵn trong file nguồn để toàn bộ 52 đơn vị tự động nhận diện
-      if (EMBEDDED_FIREBASE_URL && EMBEDDED_FIREBASE_URL.trim()) return EMBEDDED_FIREBASE_URL.trim();
-      return "";
-    }
-
-    function openConfigModal() {
-      document.getElementById('firebaseDbUrl').value = getActiveFirebaseUrl();
-      document.getElementById('configModal').classList.remove('hidden');
-    }
-    function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
-
-    function saveFirebaseConfigLocal() {
-      const url = document.getElementById('firebaseDbUrl').value.trim();
-      if (url) {
-        localStorage.setItem(STORAGE_KEY_FB_URL, url);
-        showToast("Đã lưu cấu hình Firebase trên trình duyệt này!");
-      } else {
-        localStorage.removeItem(STORAGE_KEY_FB_URL);
-        showToast("Đã xóa cấu hình Firebase cục bộ!");
-      }
-      closeConfigModal();
-      setTimeout(() => location.reload(), 1000);
-    }
-
-    // TÍNH NĂNG ĐẶC BIỆT: Tự động tiêm URL vào mã HTML và tải về file index.html mới
-    // Admin TCT chỉ cần commit đè file này lên repo GitHub taichinhso.cloud,
-    // thì tất cả 52 đơn vị truy cập link web đều TỰ ĐỘNG nhận Online mà không cần nhập gì cả!
-    function publishConfiguredHtmlForOnline() {
-      const url = document.getElementById('firebaseDbUrl').value.trim();
-      if (!url) {
-        alert("Vui lòng nhập Firebase Database URL trước khi xuất bản!");
-        return;
-      }
-
-      // Lưu vào máy Admin
-      localStorage.setItem(STORAGE_KEY_FB_URL, url);
-
-      // Đọc toàn bộ nội dung mã nguồn HTML của trang hiện tại
-      let currentSource = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
-
-      // Thay thế dòng const EMBEDDED_FIREBASE_URL = "..."; thành URL mới
-      const regex = /const\s+EMBEDDED_FIREBASE_URL\s*=\s*["'].*?["'];/g;
-      const replacement = `const EMBEDDED_FIREBASE_URL = "${url}";`;
-      
-      if (regex.test(currentSource)) {
-        currentSource = currentSource.replace(regex, replacement);
-      } else {
-        currentSource = currentSource.replace('const STORAGE_KEY_FB_URL = "VNPOST_FIREBASE_URL";', `const STORAGE_KEY_FB_URL = "VNPOST_FIREBASE_URL";\n    const EMBEDDED_FIREBASE_URL = "${url}";`);
-      }
-
-      // Tạo blob và kích hoạt tải về file index.html
-      const blob = new Blob([currentSource], { type: "text/html;charset=utf-8" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "index.html";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      closeConfigModal();
-      alert("HƯỚNG DẪN HOÀN TẤT:\n\n1. Hệ thống vừa tải về file [index.html] đã tích hợp sẵn URL Online.\n2. Bạn chỉ cần vào GitHub repo [dieu-hanh-thu-hoi-no] và tải đè file [index.html] này lên.\n3. Kể từ giây phút đó, tất cả 52 đơn vị chỉ cần mở https://taichinhso.cloud là TỰ ĐỘNG kết nối Online với TCT mà KHÔNG CẦN đơn vị nào phải nhập tay nữa!");
-      setTimeout(() => location.reload(), 1500);
     }
 
     // XUẤT EXCEL
@@ -3940,7 +2714,8 @@
         "Thời gian NVKD nhắn": d.status.nvkdTime || "",
         "Phản hồi từ khách hàng": d.status.feedback,
         "Ghi chú": d.status.note || "",
-        "Cập nhật lần cuối": d.status.lastUpdated || ""
+        "Cập nhật lần cuối": d.status.lastUpdated || "",
+        "Bản tin nhắc nợ": d.reminderMsg
       }));
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
@@ -3958,326 +2733,11 @@
     window.addEventListener('DOMContentLoaded', () => {
       initOfficers();
       getStoredAccounts();
+      getStoredOfficerAccounts();
       initFirebase();
     });
-  
-    // ==================== QUẢN LÝ TIẾN ĐỘ ĐÔN ĐỐC & PHẢN HỒI KH THEO NGÀY ====================
-    function getDateString(d) {
-      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-    }
-
-    function getShortDateString(d) {
-      return `${d.getDate()}/${d.getMonth() + 1}`;
-    }
-
-    // Kiểm tra xem chuỗi thời gian (timeStr) có khớp với ngày target hay không
-    function matchDateInTimeString(timeStr, targetDate) {
-      if (!timeStr) return false;
-      const fullDateStr = getDateString(targetDate);     // ví dụ: "21/10/2026"
-      const shortDateStr = getShortDateString(targetDate); // ví dụ: "21/10"
-      return timeStr.includes(fullDateStr) || timeStr.includes(shortDateStr);
-    }
-
-    function renderDailyRemindersManagement() {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-
-      const strToday = getDateString(today);
-      const strYesterday = getDateString(yesterday);
-
-      document.getElementById('lblTodayDate').innerText = strToday;
-      document.getElementById('lblYesterdayDate').innerText = strYesterday;
-
-      // Dataset dùng để tổng hợp: Nếu là Admin TCT -> Toàn quốc. Nếu là Đơn vị -> Chỉ phạm vi đơn vị
-      const dataset = (currentUser && currentUser.role === 'ADMIN') ? rawDataset : rawDataset.filter(d => {
-        return d.province.includes(currentUser.unitName) || currentUser.unitName.includes(d.province) || (currentUser.unitCode && d.unitCode === currentUser.unitCode);
-      });
-
-      // 1. Tính toán số lần gửi Hôm nay vs Hôm qua của 3 tầng
-      let tctToday = 0, tctYesterday = 0;
-      let cqtToday = 0, cqtYesterday = 0;
-      let nvkdToday = 0, nvkdYesterday = 0;
-
-      // Cơ cấu phản hồi của khách hàng
-      const feedbackCounts = {
-        'HEN_TRA': 0,
-        'DA_TRA': 0,
-        'KHONG_NGHE': 0,
-        'DOI_SO': 0,
-        'TIEU_CUC': 0,
-        'CHUA_LIEN_HE': 0,
-        'KHAC': 0
-      };
-
-      // Thống kê theo từng đơn vị
-      const unitMap = {};
-      const unitsList = (currentUser && currentUser.role === 'ADMIN') ? UNIT_DEFINITIONS : UNIT_DEFINITIONS.filter(u => u.code === currentUser.unitCode || u.name === currentUser.unitName);
-      unitsList.forEach(u => {
-        unitMap[u.name] = {
-          name: u.name,
-          code: u.code,
-          totalLoans: 0,
-          tctToday: 0,
-          tctYesterday: 0,
-          cqtToday: 0,
-          cqtYesterday: 0,
-          nvkdToday: 0,
-          nvkdYesterday: 0,
-          positiveCount: 0, // Hẹn trả + Đã trả
-          riskCount: 0       // Đổi số + Tiêu cực
-        };
-      });
-
-      dataset.forEach(item => {
-        const st = item.status;
-        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
-        const unitKey = u ? u.name : item.province;
-        if (!unitMap[unitKey]) {
-          unitMap[unitKey] = {
-            name: unitKey,
-            code: item.unitCode || "---",
-            totalLoans: 0,
-            tctToday: 0,
-            tctYesterday: 0,
-            cqtToday: 0,
-            cqtYesterday: 0,
-            nvkdToday: 0,
-            nvkdYesterday: 0,
-            positiveCount: 0,
-            riskCount: 0
-          };
-        }
-        unitMap[unitKey].totalLoans++;
-
-        // Kiểm tra layer TCT
-        if (st.tctStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.tctTime, today)) {
-            tctToday++;
-            unitMap[unitKey].tctToday++;
-          } else if (matchDateInTimeString(st.tctTime, yesterday)) {
-            tctYesterday++;
-            unitMap[unitKey].tctYesterday++;
-          } else if (!st.tctTime) {
-            // Nếu không ghi mốc giờ, tính tạm vào ngày hiện tại
-            tctToday++;
-            unitMap[unitKey].tctToday++;
-          }
-        }
-
-        // Kiểm tra layer CQT
-        if (st.cqtStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.cqtTime, today)) {
-            cqtToday++;
-            unitMap[unitKey].cqtToday++;
-          } else if (matchDateInTimeString(st.cqtTime, yesterday)) {
-            cqtYesterday++;
-            unitMap[unitKey].cqtYesterday++;
-          }
-        }
-
-        // Kiểm tra layer NVKD
-        if (st.nvkdStatus === 'DA_NHAN') {
-          if (matchDateInTimeString(st.nvkdTime, today)) {
-            nvkdToday++;
-            unitMap[unitKey].nvkdToday++;
-          } else if (matchDateInTimeString(st.nvkdTime, yesterday)) {
-            nvkdYesterday++;
-            unitMap[unitKey].nvkdYesterday++;
-          }
-        }
-
-        // Phản hồi khách hàng
-        const fb = st.feedback || 'CHUA_LIEN_HE';
-        if (feedbackCounts[fb] !== undefined) feedbackCounts[fb]++;
-        else feedbackCounts['KHAC'] = (feedbackCounts['KHAC'] || 0) + 1;
-
-        if (fb === 'HEN_TRA' || fb === 'DA_TRA') unitMap[unitKey].positiveCount++;
-        if (fb === 'DOI_SO' || fb === 'TIEU_CUC') unitMap[unitKey].riskCount++;
-      });
-
-      // Render số liệu 3 cấp lên thẻ KPI
-      document.getElementById('statTctToday').innerText = tctToday.toLocaleString('vi-VN');
-      document.getElementById('statTctYesterday').innerText = tctYesterday.toLocaleString('vi-VN');
-      const diffTctVal = tctToday - tctYesterday;
-      document.getElementById('diffTct').innerText = (diffTctVal >= 0 ? `+${diffTctVal}` : `${diffTctVal}`);
-      document.getElementById('diffTct').className = diffTctVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-      document.getElementById('statCqtToday').innerText = cqtToday.toLocaleString('vi-VN');
-      document.getElementById('statCqtYesterday').innerText = cqtYesterday.toLocaleString('vi-VN');
-      const diffCqtVal = cqtToday - cqtYesterday;
-      document.getElementById('diffCqt').innerText = (diffCqtVal >= 0 ? `+${diffCqtVal}` : `${diffCqtVal}`);
-      document.getElementById('diffCqt').className = diffCqtVal >= 0 ? "text-blue-600 font-bold" : "text-rose-600 font-bold";
-
-      document.getElementById('statNvkdToday').innerText = nvkdToday.toLocaleString('vi-VN');
-      document.getElementById('statNvkdYesterday').innerText = nvkdYesterday.toLocaleString('vi-VN');
-      const diffNvkdVal = nvkdToday - nvkdYesterday;
-      document.getElementById('diffNvkd').innerText = (diffNvkdVal >= 0 ? `+${diffNvkdVal}` : `${diffNvkdVal}`);
-      document.getElementById('diffNvkd').className = diffNvkdVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-      // Render cơ cấu phản hồi KH
-      const totalDataset = dataset.length || 1;
-      ['HEN_TRA', 'DA_TRA', 'KHONG_NGHE', 'DOI_SO', 'TIEU_CUC', 'CHUA_LIEN_HE'].forEach(key => {
-        const cnt = feedbackCounts[key] || 0;
-        const pct = Math.round((cnt / totalDataset) * 100);
-        const countEl = document.getElementById(`fbCount_${key}`);
-        const pctEl = document.getElementById(`fbPct_${key}`);
-        if (countEl) countEl.innerText = cnt.toLocaleString('vi-VN');
-        if (pctEl) pctEl.innerText = `${pct}%`;
-      });
-
-      // Render bảng chi tiết từng đơn vị
-      const tbody = document.getElementById('dailyRemindersTableBody');
-      tbody.innerHTML = '';
-      const listUnits = Object.values(unitMap).sort((a, b) => b.nvkdToday - a.nvkdToday || b.totalLoans - a.totalLoans);
-
-      listUnits.forEach((u, idx) => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition border-b border-slate-100 text-[11px]";
-        tr.innerHTML = `
-          <td class="p-1.5 text-center text-slate-400 font-medium">${idx + 1}</td>
-          <td class="p-1.5 truncate">
-            <span class="font-bold text-slate-800">${u.name}</span>
-            <span class="text-[9px] text-slate-400 font-mono ml-1">(${u.code})</span>
-          </td>
-          <td class="p-1.5 text-center font-bold">${u.totalLoans}</td>
-          <td class="p-1.5 text-center bg-indigo-50/30">
-            <span class="font-bold text-indigo-700">${u.tctToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.tctYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center bg-blue-50/30">
-            <span class="font-bold text-blue-700">${u.cqtToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.cqtYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center bg-emerald-50/30">
-            <span class="font-bold text-emerald-700">${u.nvkdToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.nvkdYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center font-semibold text-emerald-700">
-            ${u.positiveCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.positiveCount / u.totalLoans)*100) : 0}%)</span>
-          </td>
-          <td class="p-1.5 text-center font-semibold text-rose-700">
-            ${u.riskCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.riskCount / u.totalLoans)*100) : 0}%)</span>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // XUẤT EXCEL BÁO CÁO ĐÔN ĐỐC TOÀN QUỐC HÀNG NGÀY (HÔM NAY VS HÔM QUA)
-    function exportDailyRemindersReportExcel() {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-      const strToday = getDateString(today);
-      const strYesterday = getDateString(yesterday);
-
-      // Sheet 1: Tổng hợp theo từng đơn vị
-      const unitMap = {};
-      UNIT_DEFINITIONS.forEach(u => {
-        unitMap[u.name] = {
-          name: u.name,
-          code: u.code,
-          totalLoans: 0,
-          totalDue: 0,
-          tctToday: 0,
-          tctYesterday: 0,
-          cqtToday: 0,
-          cqtYesterday: 0,
-          nvkdToday: 0,
-          nvkdYesterday: 0,
-          henTra: 0,
-          daTra: 0,
-          thueBao: 0,
-          doiSo: 0,
-          tieuCuc: 0,
-          chuaPhanHoi: 0
-        };
-      });
-
-      rawDataset.forEach(item => {
-        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
-        const k = u ? u.name : item.province;
-        if (!unitMap[k]) {
-          unitMap[k] = { name: k, code: item.unitCode || "---", totalLoans: 0, totalDue: 0, tctToday: 0, tctYesterday: 0, cqtToday: 0, cqtYesterday: 0, nvkdToday: 0, nvkdYesterday: 0, henTra: 0, daTra: 0, thueBao: 0, doiSo: 0, tieuCuc: 0, chuaPhanHoi: 0 };
-        }
-        unitMap[k].totalLoans++;
-        unitMap[k].totalDue += (item.outstandingDue || 0);
-
-        const st = item.status;
-        if (st.tctStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.tctTime, today) || !st.tctTime) unitMap[k].tctToday++;
-          else if (matchDateInTimeString(st.tctTime, yesterday)) unitMap[k].tctYesterday++;
-        }
-        if (st.cqtStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.cqtTime, today)) unitMap[k].cqtToday++;
-          else if (matchDateInTimeString(st.cqtTime, yesterday)) unitMap[k].cqtYesterday++;
-        }
-        if (st.nvkdStatus === 'DA_NHAN') {
-          if (matchDateInTimeString(st.nvkdTime, today)) unitMap[k].nvkdToday++;
-          else if (matchDateInTimeString(st.nvkdTime, yesterday)) unitMap[k].nvkdYesterday++;
-        }
-
-        const fb = st.feedback;
-        if (fb === 'HEN_TRA') unitMap[k].henTra++;
-        else if (fb === 'DA_TRA') unitMap[k].daTra++;
-        else if (fb === 'KHONG_NGHE') unitMap[k].thueBao++;
-        else if (fb === 'DOI_SO') unitMap[k].doiSo++;
-        else if (fb === 'TIEU_CUC') unitMap[k].tieuCuc++;
-        else unitMap[k].chuaPhanHoi++;
-      });
-
-      const summaryData = Object.values(unitMap).map((u, i) => ({
-        "STT": i + 1,
-        "Mã bưu điện": u.code,
-        "Tên Bưu điện tỉnh / TP": u.name,
-        "Tổng số khoản nợ": u.totalLoans,
-        "Tổng tiền cần thu (VNĐ)": u.totalDue,
-        [`TCT gửi CQT (Hôm nay ${strToday})`]: u.tctToday,
-        [`TCT gửi CQT (Hôm qua ${strYesterday})`]: u.tctYesterday,
-        [`CQT gửi NVKD (Hôm nay ${strToday})`]: u.cqtToday,
-        [`CQT gửi NVKD (Hôm qua ${strYesterday})`]: u.cqtYesterday,
-        [`NVKD nhắn tin KH (Hôm nay ${strToday})`]: u.nvkdToday,
-        [`NVKD nhắn tin KH (Hôm qua ${strYesterday})`]: u.nvkdYesterday,
-        "Khách hẹn ngày trả": u.henTra,
-        "Khách đã nộp / Tra soát": u.daTra,
-        "Thuê bao / Không nghe": u.thueBao,
-        "Khách đã đổi số ĐT": u.doiSo,
-        "Khách thách thức / Thóa mạ": u.tieuCuc,
-        "Chưa có phản hồi": u.chuaPhanHoi
-      }));
-
-      // Sheet 2: Danh sách chi tiết các khoản nợ có phản hồi của khách hàng
-      const detailFeedbackData = rawDataset.filter(d => d.status.feedback !== 'CHUA_LIEN_HE').map((d, idx) => ({
-        "STT": idx + 1,
-        "Đơn vị": d.province,
-        "Mã hợp đồng": d.contractId,
-        "Tên khách hàng": d.customerName,
-        "SĐT khách hàng": d.customerPhone,
-        "Tiền cần thu (VNĐ)": d.outstandingDue,
-        "Số ngày quá hạn": d.overdueDays,
-        "NVKD phụ trách": d.staffName,
-        "SĐT NVKD": d.staffCode,
-        "Thời gian NVKD gửi tin": d.status.nvkdTime || "",
-        "Phản hồi từ khách hàng": d.status.feedback,
-        "Ghi chú chi tiết trao đổi": d.status.note || "",
-        "Cập nhật lần cuối": d.status.lastUpdated || ""
-      }));
-
-      const wb = XLSX.utils.book_new();
-      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, wsSummary, "Tong_Hop_Don_Doc_3_Cap");
-
-      const wsDetail = XLSX.utils.json_to_sheet(detailFeedbackData);
-      XLSX.utils.book_append_sheet(wb, wsDetail, "Chi_Tiet_Phan_Hoi_KH");
-
-      XLSX.writeFile(wb, `Bao_Cao_Don_Doc_Va_Phan_Hoi_KH_${new Date().toISOString().slice(0, 10)}.xlsx`);
-      showToast("Đã xuất báo cáo đôn đốc toàn quốc thành công!");
-    }
-
   </script>
 </body>
 </html>
+debt_management_tct_v10.html
+Đang hiển thị debt_management_tct_v10.html.
