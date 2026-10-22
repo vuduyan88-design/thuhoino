@@ -315,12 +315,13 @@
             </div>
           </div>
 
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <button onclick="copySelectedReminders()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow transition flex items-center gap-1">
-              <i class="fa-solid fa-copy"></i> Copy Đã Chọn (<span id="btnCopySelectedNum">0</span>)
+          <div class="flex items-center gap-1.5 flex-wrap bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <span class="text-[10px] font-bold text-slate-600 px-1 hidden sm:inline"><i class="fa-solid fa-clone text-indigo-600"></i> Xuất tin nhắn:</span>
+            <button onclick="copySelectedReminders()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1.5" title="Chép tất cả các bản tin đang được tick chọn">
+              <i class="fa-solid fa-copy text-xs"></i> Copy Đã Chọn (<span id="btnCopySelectedNum" class="text-amber-300 font-extrabold">0</span>)
             </button>
-            <button onclick="copyCurrentUnitBatchReminders()" class="bg-amber-500 hover:bg-amber-600 text-indigo-950 text-[11px] font-bold px-2.5 py-1 rounded shadow transition flex items-center gap-1">
-              <i class="fa-solid fa-paste"></i> Copy Tất Cả Bản Tin
+            <button onclick="copyCurrentUnitBatchReminders()" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-indigo-950 text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1.5" title="Chép toàn bộ bản tin trong danh sách đang lọc">
+              <i class="fa-solid fa-paste text-xs"></i> Copy Toàn Bộ Bản Tin
             </button>
           </div>
         </div>
@@ -948,10 +949,52 @@
     </div>
   </div>
 
-  <!-- Toast -->
-  <div id="toast" class="fixed bottom-4 right-4 bg-slate-900 text-white px-3.5 py-2 rounded-lg shadow-2xl text-xs flex items-center gap-2 transform transition-all duration-300 translate-y-24 opacity-0 z-50">
-    <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
-    <span id="toastMsg">Thao tác thành công!</span>
+  <!-- Toast Popup (Hỗ trợ thông báo Thành công / Thất bại) -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-24 opacity-0 pointer-events-none">
+    <div id="toastCard" class="bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs flex items-center gap-2.5 border border-slate-700 min-w-[280px] max-w-md">
+      <div id="toastIconWrap" class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm shrink-0">
+        <i id="toastIcon" class="fa-solid fa-circle-check"></i>
+      </div>
+      <div class="flex-1 pr-2">
+        <div id="toastTitle" class="font-bold text-white text-[11px] mb-0.5">Thông báo hệ thống</div>
+        <div id="toastMsg" class="text-slate-200 text-[11px] leading-tight">Thao tác thành công!</div>
+      </div>
+      <button onclick="hideToast()" class="text-slate-400 hover:text-white p-1 pointer-events-auto">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Hỗ Trợ Xem & Sao Chép Bản Tin (Fallback Modal khi trình duyệt chặn quyền clipboard) -->
+  <div id="copyPreviewModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-5 border border-slate-200 flex flex-col max-h-[85vh]">
+      <div class="flex justify-between items-center pb-2.5 border-b border-slate-200">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-clipboard-list text-sm"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-slate-800" id="copyModalTitle">Nội Dung Bản Tin Nhắc Nợ</h3>
+            <p class="text-[10px] text-slate-500" id="copyModalSubTitle">Xem trước và sao chép nội dung tin nhắn</p>
+          </div>
+        </div>
+        <button onclick="closeCopyPreviewModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="py-3 flex-1 flex flex-col">
+        <textarea id="copyModalTextarea" readonly class="w-full flex-1 min-h-[220px] p-3 text-xs bg-slate-50 border border-slate-300 rounded-xl font-sans leading-relaxed focus:bg-white focus:outline-indigo-600 select-all"></textarea>
+      </div>
+
+      <div class="pt-2 border-t border-slate-200 flex justify-between items-center gap-2">
+        <span class="text-[11px] text-slate-500">Mẹo: Bạn có thể bấm nút bên phải hoặc bấm <b>Ctrl + C</b></span>
+        <div class="flex gap-2">
+          <button onclick="closeCopyPreviewModal()" class="px-3 py-1.5 border border-slate-300 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50">Đóng</button>
+          <button onclick="copyFromModalTextarea()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow flex items-center gap-1.5">
+            <i class="fa-solid fa-copy"></i> Sao chép toàn bộ văn bản
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ==================== JAVASCRIPT HỆ THỐNG ==================== -->
@@ -1275,7 +1318,7 @@
       const bulkGroupUnit = document.getElementById('bulkGroupUnit');
 
       if (currentUser.role === 'ADMIN') {
-        headerTitle.innerHTML = `<b class="text-amber-400">TỔNG CÔNG TY</b> | Theo dõi, giám sát toàn trình mạng lưới`;
+        headerTitle.innerHTML = `<b class="text-amber-400">TỔNG CÔNG TY (Layer 1)</b> | Toàn quyền điều hành toàn mạng lưới`;
         adminToolbar.classList.remove('hidden');
         btnUnifiedAdmin.classList.remove('hidden');
         btnUnifiedAdmin.classList.add('flex');
@@ -1284,13 +1327,12 @@
         reportRankingSubtitle.innerText = "Thống kê so sánh toàn bộ các đơn vị trên toàn mạng lưới";
         colLoanRangeFilter.classList.remove('hidden');
 
-        // TCT chỉ theo dõi, ẩn các nút đổi trạng thái hàng loạt
-        bulkGroupTCT.classList.add('hidden');
-        bulkGroupTCT.classList.remove('flex');
+        bulkGroupTCT.classList.remove('hidden');
+        bulkGroupTCT.classList.add('flex');
         bulkGroupUnit.classList.add('hidden');
         bulkGroupUnit.classList.remove('flex');
       } else if (currentUser.role === 'OFFICER') {
-        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName} (CQTCT)</b> | Điều hành đôn đốc ${currentUser.assignedUnits.length} đơn vị`;
+        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName} (Layer 2 - Chuyên quản)</b> | Phụ trách ${currentUser.assignedUnits.length} đơn vị`;
         adminToolbar.classList.add('hidden');
         btnUnifiedAdmin.classList.add('hidden');
         btnUnifiedAdmin.classList.remove('flex');
@@ -1299,13 +1341,12 @@
         reportRankingSubtitle.innerText = `Thống kê trong phạm vi địa bàn chuyên quản phụ trách`;
         colLoanRangeFilter.classList.remove('hidden');
 
-        // CQTCT (Chuyên quản) có nút đổi trạng thái CQTCT gửi CQT
-        bulkGroupTCT.classList.remove('hidden');
-        bulkGroupTCT.classList.add('flex');
-        bulkGroupUnit.classList.add('hidden');
-        bulkGroupUnit.classList.remove('flex');
+        bulkGroupTCT.classList.add('hidden');
+        bulkGroupTCT.classList.remove('flex');
+        bulkGroupUnit.classList.remove('hidden');
+        bulkGroupUnit.classList.add('flex');
       } else {
-        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName} (CQT)</b> | Đơn vị tiếp nhận & điều phối NVKD`;
+        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName} (Layer 3 - Đơn vị)</b> | Phân quyền tác nghiệp tỉnh`;
         adminToolbar.classList.add('hidden');
         btnUnifiedAdmin.classList.add('hidden');
         btnUnifiedAdmin.classList.remove('flex');
@@ -1314,7 +1355,6 @@
         reportRankingSubtitle.innerText = `Báo cáo số liệu nội bộ đơn vị ${currentUser.unitName}`;
         colLoanRangeFilter.classList.add('hidden');
 
-        // CQT tỉnh có nút đổi trạng thái CQT và NVKD
         bulkGroupTCT.classList.add('hidden');
         bulkGroupTCT.classList.remove('flex');
         bulkGroupUnit.classList.remove('hidden');
@@ -1545,17 +1585,12 @@
         return;
       }
 
-      // Kiểm tra quyền đổi trạng thái hàng loạt:
-      if (currentUser.role === 'ADMIN') {
-        alert("Tài khoản TCT đóng vai trò giám sát, theo dõi toàn trình. Không trực tiếp thay đổi trạng thái gửi!");
+      if (field === 'tctStatus' && currentUser.role !== 'ADMIN') {
+        alert("Chỉ tài khoản Tổng Công Ty mới có quyền cập nhật trạng thái CQTCT gửi CQT!");
         return;
       }
-      if (field === 'tctStatus' && currentUser.role !== 'OFFICER') {
-        alert("Chỉ tài khoản Chuyên quản (CQTCT) mới có quyền cập nhật trạng thái CQTCT gửi CQT!");
-        return;
-      }
-      if ((field === 'cqtStatus' || field === 'nvkdStatus') && currentUser.role !== 'UNIT') {
-        alert("Chỉ tài khoản Đơn vị Bưu điện (CQT) mới có quyền cập nhật trạng thái CQT và NVKD!");
+      if ((field === 'cqtStatus' || field === 'nvkdStatus') && currentUser.role === 'ADMIN') {
+        alert("Tổng Công Ty chỉ cập nhật trạng thái TCT gửi tới CQT. Không can thiệp đổi trạng thái CQT và NVKD thay cho cơ sở!");
         return;
       }
 
@@ -1677,13 +1712,9 @@
         const isCQTSent = (isTCTSent && st.cqtStatus === 'DA_GUI');
         const isChecked = selectedContractIds.has(item.contractId);
 
-        // Phân quyền chuẩn xác theo vai trò:
-        // - CQTCT (Chuyên quản - OFFICER): Có quyền thao tác cột CQTCT (Đã gửi / Chưa gửi)
-        // - CQT (Đơn vị tỉnh - UNIT): Có quyền thao tác CQT khi CQTCT đã gửi, thao tác NVKD & Phản hồi khi CQT đã gửi
-        // - TCT (ADMIN): Chỉ theo dõi, giám sát toàn trình (Read-only), không can thiệp tác nghiệp gửi
-        const canEditCQTCT = (currentUser.role === 'OFFICER');
-        const canEditCQT = (currentUser.role === 'UNIT' && isTCTSent);
-        const canEditNVKD = (currentUser.role === 'UNIT' && isCQTSent);
+        const canEditTCT = (currentUser.role === 'ADMIN');
+        const canEditCQT = (currentUser.role === 'ADMIN') || isTCTSent;
+        const canEditNVKD = (currentUser.role === 'ADMIN') || isCQTSent;
 
         // Cập nhật lại bản tin nhắc nợ đảm bảo đầy đủ SĐT KH và theo đúng kịch bản cảnh báo số ngày nợ
         const currentReminder = buildReminderMessage(item.customerName, item.customerPhone, item.contractId, item.overdueDays, item.outstandingDue, item.staffName, item.staffCode, item.province);
@@ -1748,9 +1779,14 @@
               <div class="text-[10px] text-slate-600 line-clamp-2 leading-relaxed" title="${currentReminder}">
                 ${currentReminder}
               </div>
-              <button onclick="copySingleReminder('${item.contractId}')" class="mt-1 text-[9px] text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1">
-                <i class="fa-solid fa-copy"></i> Chép bản tin
-              </button>
+              <div class="mt-1 flex items-center justify-between gap-1">
+                <button id="btnCopy_${item.contractId}" onclick="copySingleReminder('${item.contractId}')" class="text-[9px] bg-white hover:bg-indigo-50 active:scale-95 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded font-semibold flex items-center gap-1 shadow-2xs transition" title="Sao chép bản tin của khách hàng này">
+                  <i class="fa-solid fa-copy text-[9px]"></i> Chép bản tin
+                </button>
+                <button onclick="previewSingleReminder('${item.contractId}')" class="text-[9px] text-slate-500 hover:text-indigo-600 underline" title="Mở rộng xem chi tiết">
+                  Xem toàn bộ
+                </button>
+              </div>
             </div>
           </td>
 
@@ -1763,7 +1799,7 @@
                     <span>CQTCT:</span>
                     <span class="text-[8px] text-slate-400 font-normal truncate">${st.tctTime || ''}</span>
                   </div>
-                  <select ${!canEditCQTCT ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'tctStatus', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] ${isTCTSent ? 'text-emerald-700 font-bold border-emerald-400' : 'text-slate-600'}">
+                  <select ${!canEditTCT ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'tctStatus', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] ${isTCTSent ? 'text-emerald-700 font-bold border-emerald-400' : 'text-slate-600'}">
                     <option value="CHUA_GUI" ${st.tctStatus === 'CHUA_GUI' ? 'selected' : ''}>Chưa gửi</option>
                     <option value="DA_GUI" ${st.tctStatus === 'DA_GUI' ? 'selected' : ''}>✓ Đã gửi</option>
                   </select>
@@ -1863,52 +1899,170 @@
       }
     }
 
-    // SAO CHÉP BẢN TIN NHẮC NỢ
-    function copySingleReminder(contractId) {
-      const item = rawDataset.find(d => d.contractId === contractId);
-      if (item) {
-        navigator.clipboard.writeText(item.reminderMsg).then(() => {
-          showToast(`Đã chép bản tin của KH ${item.customerName}`);
-        });
+    // ==================== BỘ CÔNG CỤ SAO CHÉP MẠNH MẼ ĐA NỀN TẢNG (ROBUST CLIPBOARD & POPUP) ====================
+    async function copyTextToClipboard(textToCopy, successMsg = "Đã sao chép thành công!", errorMsg = "Không thể sao chép tự động!") {
+      if (!textToCopy || !textToCopy.trim()) {
+        showToast("Không có nội dung bản tin để sao chép!", "error", "Lỗi dữ liệu");
+        return false;
+      }
+
+      let isSuccess = false;
+
+      // Phương pháp 1: Sử dụng Clipboard API hiện đại
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(textToCopy);
+          isSuccess = true;
+        } catch (err) {
+          console.warn("Clipboard API bị chặn, chuyển sang fallback execCommand:", err);
+        }
+      }
+
+      // Phương pháp 2: Fallback tạo textarea ẩn và document.execCommand('copy')
+      if (!isSuccess) {
+        try {
+          const textArea = document.createElement("textarea");
+          textArea.value = textToCopy;
+          textArea.style.position = "fixed";
+          textArea.style.top = "0";
+          textArea.style.left = "0";
+          textArea.style.width = "2em";
+          textArea.style.height = "2em";
+          textArea.style.padding = "0";
+          textArea.style.border = "none";
+          textArea.style.outline = "none";
+          textArea.style.boxShadow = "none";
+          textArea.style.background = "transparent";
+          textArea.style.opacity = "0";
+          textArea.setAttribute("readonly", "");
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          textArea.setSelectionRange(0, textArea.value.length);
+          isSuccess = document.execCommand("copy");
+          document.body.removeChild(textArea);
+        } catch (err) {
+          console.error("Lỗi execCommand:", err);
+        }
+      }
+
+      // Phản hồi kết quả bằng Pop-up Toast
+      if (isSuccess) {
+        showToast(successMsg, "success", "Sao chép thành công");
+        return true;
+      } else {
+        // Fallback an toàn: Mở Modal hiển thị văn bản để người dùng bấm nút sao chép hoặc Ctrl+C
+        showToast(errorMsg + " Đã mở cửa sổ văn bản để sao chép.", "warning", "Cần xác nhận");
+        openCopyPreviewModal("BẢN TIN NHẮC NỢ", textToCopy);
+        return false;
       }
     }
 
-    function copySelectedReminders() {
+    // 1. Sao chép 1 bản tin đơn lẻ
+    async function copySingleReminder(contractId) {
+      const item = rawDataset.find(d => d.contractId === contractId);
+      if (!item) {
+        showToast("Không tìm thấy thông tin hợp đồng!", "error", "Lỗi thao tác");
+        return;
+      }
+
+      // Đảm bảo nội dung bản tin luôn được cập nhật chính xác theo số ngày và số lần
+      const message = item.reminderMsg || buildReminderMessage(item.customerName, item.customerPhone, item.contractId, item.overdueDays, item.outstandingDue, item.staffName, item.staffCode, item.province, item.reminderCount);
+      const success = await copyTextToClipboard(message, `Đã chép bản tin nhắc nợ của KH: ${item.customerName}`);
+
+      if (success) {
+        const btn = document.getElementById(`btnCopy_${contractId}`);
+        if (btn) {
+          const originalHtml = btn.innerHTML;
+          btn.innerHTML = '<i class="fa-solid fa-check text-emerald-600"></i> Đã chép!';
+          btn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-300");
+          setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            btn.classList.remove("bg-emerald-50", "text-emerald-700", "border-emerald-300");
+          }, 2000);
+        }
+      }
+    }
+
+    // Xem trước 1 bản tin đơn lẻ
+    function previewSingleReminder(contractId) {
+      const item = rawDataset.find(d => d.contractId === contractId);
+      if (!item) return;
+      const message = item.reminderMsg || buildReminderMessage(item.customerName, item.customerPhone, item.contractId, item.overdueDays, item.outstandingDue, item.staffName, item.staffCode, item.province, item.reminderCount);
+      openCopyPreviewModal(`BẢN TIN KH: ${item.customerName} (HĐ: ${item.contractId})`, message);
+    }
+
+    // 2. Sao chép các bản tin đã tick chọn
+    async function copySelectedReminders() {
       if (selectedContractIds.size === 0) {
-        alert("Bạn chưa tick chọn bản tin nào! Vui lòng chọn ít nhất 1 bản tin ở cột đầu tiên.");
+        showToast("Bạn chưa tick chọn khoản nợ nào! Vui lòng tick vào ô ở cột đầu tiên.", "warning", "Chưa chọn bản tin");
         return;
       }
 
       const selectedList = rawDataset.filter(d => selectedContractIds.has(d.contractId));
-      let text = `=== DANH SÁCH ${selectedList.length} BẢN TIN ĐÔN ĐỐC ĐÃ CHỌN (${new Date().toLocaleDateString('vi-VN')}) ===\n\n`;
-      selectedList.forEach((item, idx) => {
-        text += `[Bản tin ${idx + 1}] KH: ${item.customerName} - HĐ: ${item.contractId} - SĐT: ${item.customerPhone || '---'}\n`;
-        text += `Nội dung gửi:\n"${item.reminderMsg}"\n`;
-        text += `------------------------------------------------------------\n`;
-      });
-
-      navigator.clipboard.writeText(text).then(() => {
-        showToast(`Đã sao chép thành công ${selectedList.length} bản tin đã chọn!`);
-      });
-    }
-
-    function copyCurrentUnitBatchReminders() {
-      if (!currentFilteredData || currentFilteredData.length === 0) {
-        alert("Không có khoản nợ nào trong bộ lọc hiện tại để sao chép!");
+      if (selectedList.length === 0) {
+        showToast("Không tìm thấy dữ liệu của các khoản nợ đã chọn!", "error", "Lỗi dữ liệu");
         return;
       }
 
-      let text = `=== BẢN TIN ĐÔN ĐỐC TOÀN BỘ ĐƠN VỊ HIỆN TẠI (${new Date().toLocaleDateString('vi-VN')}) ===\n`;
-      text += `Tổng số bản tin: ${currentFilteredData.length} khoản\n\n`;
-      currentFilteredData.forEach((item, idx) => {
-        text += `[${idx + 1}] KH: ${item.customerName} - HĐ: ${item.contractId} - SĐT: ${item.customerPhone || '---'}\n`;
-        text += `Nội dung: "${item.reminderMsg}"\n`;
+      let text = `=== DANH SÁCH ${selectedList.length} BẢN TIN NHẮC NỢ ĐÃ CHỌN (${new Date().toLocaleDateString('vi-VN')}) ===\n\n`;
+      selectedList.forEach((item, idx) => {
+        const msg = item.reminderMsg || buildReminderMessage(item.customerName, item.customerPhone, item.contractId, item.overdueDays, item.outstandingDue, item.staffName, item.staffCode, item.province, item.reminderCount);
+        text += `[Bản tin ${idx + 1}] KH: ${item.customerName} - SĐT: ${item.customerPhone || '---'} - HĐ: ${item.contractId}\n`;
+        text += `Nội dung: "${msg}"\n`;
         text += `------------------------------------------------------------\n`;
       });
 
-      navigator.clipboard.writeText(text).then(() => {
-        showToast(`Đã sao chép toàn bộ ${currentFilteredData.length} bản tin!`);
+      await copyTextToClipboard(text, `Đã sao chép toàn bộ ${selectedList.length} bản tin đã tick chọn!`);
+    }
+
+    // 3. Sao chép toàn bộ bản tin trong bộ lọc hiện tại
+    async function copyCurrentUnitBatchReminders() {
+      if (!currentFilteredData || currentFilteredData.length === 0) {
+        showToast("Danh sách hiện tại đang trống, không có bản tin nào để sao chép!", "warning", "Danh sách rỗng");
+        return;
+      }
+
+      const total = currentFilteredData.length;
+      let text = `=== BẢN TIN NHẮC NỢ TOÀN BỘ DANH SÁCH (${new Date().toLocaleDateString('vi-VN')}) ===\n`;
+      text += `Tổng số bản tin: ${total} khoản\n\n`;
+
+      currentFilteredData.forEach((item, idx) => {
+        const msg = item.reminderMsg || buildReminderMessage(item.customerName, item.customerPhone, item.contractId, item.overdueDays, item.outstandingDue, item.staffName, item.staffCode, item.province, item.reminderCount);
+        text += `[${idx + 1}] KH: ${item.customerName} - SĐT: ${item.customerPhone || '---'} - HĐ: ${item.contractId}\n`;
+        text += `Nội dung: "${msg}"\n`;
+        text += `------------------------------------------------------------\n`;
       });
+
+      await copyTextToClipboard(text, `Đã sao chép thành công toàn bộ ${total} bản tin trong danh sách!`);
+    }
+
+    // Modal Fallback để xem/sao chép bản tin khi cần
+    function openCopyPreviewModal(title, content) {
+      document.getElementById('copyModalTitle').innerText = title;
+      document.getElementById('copyModalTextarea').value = content;
+      document.getElementById('copyPreviewModal').classList.remove('hidden');
+    }
+
+    function closeCopyPreviewModal() {
+      document.getElementById('copyPreviewModal').classList.add('hidden');
+    }
+
+    function copyFromModalTextarea() {
+      const textarea = document.getElementById('copyModalTextarea');
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      try {
+        const success = document.execCommand('copy');
+        if (success) {
+          showToast("Đã sao chép nội dung văn bản thành công!", "success", "Thành công");
+          closeCopyPreviewModal();
+        } else {
+          showToast("Vui lòng nhấn phím Ctrl + C để sao chép thủ công!", "info", "Hướng dẫn");
+        }
+      } catch (e) {
+        showToast("Vui lòng nhấn phím Ctrl + C để sao chép thủ công!", "info", "Hướng dẫn");
+      }
     }
 
     // XÓA DỮ LIỆU CẦN MẬT KHẨU 123456
@@ -3025,11 +3179,53 @@
       XLSX.writeFile(wb, `Bao_Cao_Thu_Hoi_No_${new Date().toISOString().slice(0, 10)}.xlsx`);
     }
 
-    function showToast(msg) {
+    let toastTimeout = null;
+    function showToast(msg, type = "success", title = "Thông báo hệ thống") {
       const toast = document.getElementById('toast');
-      document.getElementById('toastMsg').innerText = msg;
+      const toastCard = document.getElementById('toastCard');
+      const toastTitle = document.getElementById('toastTitle');
+      const toastMsg = document.getElementById('toastMsg');
+      const toastIcon = document.getElementById('toastIcon');
+      const toastIconWrap = document.getElementById('toastIconWrap');
+
+      toastTitle.innerText = title;
+      toastMsg.innerText = msg;
+
+      // Điều chỉnh giao diện theo loại thông báo (success / error / warning / info)
+      if (type === "error") {
+        toastCard.className = "bg-rose-950 text-white px-4 py-3 rounded-xl shadow-2xl text-xs flex items-center gap-2.5 border border-rose-700 min-w-[280px] max-w-md pointer-events-auto";
+        toastIconWrap.className = "w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-sm shrink-0";
+        toastIcon.className = "fa-solid fa-circle-xmark";
+      } else if (type === "warning") {
+        toastCard.className = "bg-amber-950 text-white px-4 py-3 rounded-xl shadow-2xl text-xs flex items-center gap-2.5 border border-amber-700 min-w-[280px] max-w-md pointer-events-auto";
+        toastIconWrap.className = "w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm shrink-0";
+        toastIcon.className = "fa-solid fa-triangle-exclamation";
+      } else if (type === "info") {
+        toastCard.className = "bg-blue-950 text-white px-4 py-3 rounded-xl shadow-2xl text-xs flex items-center gap-2.5 border border-blue-700 min-w-[280px] max-w-md pointer-events-auto";
+        toastIconWrap.className = "w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm shrink-0";
+        toastIcon.className = "fa-solid fa-circle-info";
+      } else {
+        // Mặc định: Thành công
+        toastCard.className = "bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs flex items-center gap-2.5 border border-slate-700 min-w-[280px] max-w-md pointer-events-auto";
+        toastIconWrap.className = "w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm shrink-0";
+        toastIcon.className = "fa-solid fa-circle-check";
+      }
+
       toast.classList.remove('translate-y-24', 'opacity-0');
-      setTimeout(() => { toast.classList.add('translate-y-24', 'opacity-0'); }, 3000);
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        hideToast();
+      }, 3500);
+    }
+
+    function hideToast() {
+      const toast = document.getElementById('toast');
+      if (toast) {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-24', 'opacity-0');
+      }
     }
 
     window.addEventListener('DOMContentLoaded', () => {
