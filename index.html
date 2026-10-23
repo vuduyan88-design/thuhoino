@@ -20,7 +20,7 @@
       color: #94a3b8 !important;
       border-color: #e2e8f0 !important;
       cursor: not-allowed;
-      opacity: 0.7;
+      opacity: 0.75;
     }
   </style>
 </head>
@@ -34,7 +34,7 @@
           <i class="fa-solid fa-building-columns"></i>
         </div>
         <h2 class="text-xl font-bold text-slate-800 uppercase tracking-tight">Hệ Thống Thu Hồi Nợ TCT</h2>
-        <p class="text-xs text-slate-500 mt-1">Đăng nhập tài khoản điều hành 3 cấp: TCT / Chuyên quản / Đơn vị</p>
+        <p class="text-xs text-slate-500 mt-1">Đăng nhập tài khoản điều hành: TCT / CQ TCT / CQ BĐT (52 Đơn vị)</p>
       </div>
 
       <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
@@ -42,10 +42,10 @@
           <label class="block text-xs font-bold text-slate-700 mb-1">TÊN ĐĂNG NHẬP</label>
           <div class="relative">
             <i class="fa-solid fa-user absolute left-3 top-3 text-slate-400 text-xs"></i>
-            <input type="text" id="loginUsername" required placeholder="admin / Tên chuyên quản / Mã bưu điện" 
+            <input type="text" id="loginUsername" required placeholder="admin / Tên chuyên quản (cq1...) / Mã bưu điện" 
                    class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-indigo-600 focus:bg-white font-mono">
           </div>
-          <span class="text-[10px] text-slate-400 mt-1 block">TCT: <b class="font-mono text-indigo-700">admin</b> | Chuyên quản: <b class="font-mono text-indigo-700">cq1, cq2...</b> | Đơn vị: <b class="font-mono text-indigo-700">Mã bưu điện (VD: 39000)</b></span>
+          <span class="text-[10px] text-slate-400 mt-1 block">TCT: <b class="font-mono text-indigo-700">admin</b> | CQ TCT: <b class="font-mono text-indigo-700">cq1, cq2...</b> | CQ BĐT: <b class="font-mono text-indigo-700">Mã BĐT (VD: 39000)</b></span>
         </div>
 
         <div>
@@ -66,7 +66,7 @@
     </div>
   </div>
 
-  <!-- ==================== HEADER (TỐI ƯU GỌN GÀNG, KHÔNG DÀN HÀNG NGANG) ==================== -->
+  <!-- ==================== HEADER ==================== -->
   <header class="bg-indigo-950 text-white shadow-md border-b border-indigo-800 sticky top-0 z-30">
     <div class="w-full px-3 py-2 flex flex-col md:flex-row justify-between items-center gap-2">
       <div class="flex items-center space-x-3">
@@ -82,14 +82,11 @@
         </div>
       </div>
 
-      <!-- Menu thao tác góc phải tinh gọn -->
       <div class="flex items-center gap-2 flex-wrap justify-end">
-        <!-- NÚT DUY NHẤT TÍCH HỢP QUẢN TRỊ HỆ THỐNG TCT (CHỈ LAYER 1 TCT THẤY) -->
         <button id="btnUnifiedAdmin" onclick="openUnifiedAdminModal()" class="hidden text-xs bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-indigo-950 font-extrabold px-3 py-1.5 rounded-lg shadow-md border border-amber-400 items-center gap-1.5 transition">
           <i class="fa-solid fa-gear text-sm"></i> Quản Trị Hệ Thống TCT
         </button>
 
-        <!-- NÚT THEO DÕI LỊCH SỬ ĐĂNG NHẬP CỦA 52 ĐƠN VỊ (CHO TCT & CQTCT) -->
         <button id="btnLoginHistory" onclick="openLoginHistoryModal()" class="hidden text-xs bg-sky-800 hover:bg-sky-700 text-white font-bold px-2.5 py-1.5 rounded-lg border border-sky-600 items-center gap-1.5 shadow-sm transition">
           <i class="fa-solid fa-clock-rotate-left text-amber-300"></i> Lịch Sử Đăng Nhập (<span id="headerLoginCountToday">0/52</span>)
         </button>
@@ -126,7 +123,7 @@
     <div id="adminToolbar" class="hidden bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 flex flex-col lg:flex-row items-center justify-between gap-2">
       <div class="flex items-center gap-2 w-full lg:w-auto flex-wrap">
         <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition flex items-center justify-center gap-1.5">
-          <i class="fa-solid fa-file-arrow-up text-xs"></i> Nạp Báo Cáo Excel Mới (TCT)
+          <i class="fa-solid fa-file-arrow-up text-xs"></i> Nạp Báo Cáo Excel Mới (TCT Tự Chuyển CQ)
           <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden" onchange="handleAdminFileUpload(event)">
         </label>
         
@@ -145,7 +142,7 @@
       </div>
     </div>
 
-    <!-- Tabs Navigation 4 Tabs -->
+    <!-- Tabs Navigation -->
     <div class="flex border-b border-slate-200 space-x-2 overflow-x-auto">
       <button id="tabBtn1" onclick="switchMainTab('dashboard')" class="py-1.5 px-3 text-xs font-bold border-b-2 border-indigo-600 text-indigo-700 flex items-center gap-1.5 whitespace-nowrap">
         <i class="fa-solid fa-table-list"></i> BẢNG ĐIỀU HÀNH & ĐÔN ĐỐC
@@ -171,7 +168,7 @@
             <i class="fa-solid fa-list-check text-indigo-500"></i>
           </div>
           <div id="kpiTotalLoans" class="text-xl font-bold text-slate-800 mt-0.5">0</div>
-          <div id="kpiDoneProgress" class="text-[10px] text-emerald-600 font-medium">CQTCT gửi CQT: 0%</div>
+          <div id="kpiDoneProgress" class="text-[10px] text-emerald-600 font-medium">TCT đã chuyển CQ TCT: 0/0 (0%)</div>
         </div>
         <div class="bg-white p-2.5 rounded-xl border border-rose-200 bg-rose-50/20 shadow-sm">
           <div class="flex justify-between items-center text-rose-600 text-[10px] font-semibold uppercase">
@@ -201,11 +198,22 @@
 
       <!-- BỘ LỌC DỮ LIỆU ĐA TẦNG -->
       <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm space-y-2">
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
-          <!-- Lọc Số lần nhắc nợ (Tần suất) -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-2">
+          <!-- B. Lọc Sản Phẩm Vay -->
+          <div>
+            <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">SẢN PHẨM VAY:</label>
+            <select id="productFilter" onchange="applyFilters(true)" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600 font-bold text-indigo-950">
+              <option value="ALL">-- Tất cả sản phẩm --</option>
+              <option value="AN_VUI">Vay An Vui Bưu điện (CAKECLVPOP)</option>
+              <option value="VAY_NHANH">Vay nhanh (CAKECLVPO)</option>
+              <option value="OTHER">Sản phẩm khác</option>
+            </select>
+          </div>
+
+          <!-- Lọc Số lần nhắc nợ -->
           <div>
             <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">SỐ LẦN NHẮC NỢ:</label>
-            <select id="frequencyFilter" onchange="applyFilters()" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600 font-semibold text-indigo-900">
+            <select id="frequencyFilter" onchange="applyFilters(true)" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600 font-semibold text-indigo-900">
               <option value="ALL">-- Tất cả số lần --</option>
               <option value="1">Nhắc nợ Lần 1</option>
               <option value="2">Đôn đốc Lần 2</option>
@@ -213,26 +221,27 @@
               <option value="4+">Răn đe Lần 4 trở lên</option>
             </select>
           </div>
-          <!-- Lọc Chuyên quản -->
+
+          <!-- Lọc CQ TCT -->
           <div>
-            <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">CHUYÊN QUẢN:</label>
+            <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">CQ TCT (CHUYÊN QUẢN):</label>
             <select id="officerFilter" onchange="onOfficerChanged()" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600">
-              <option value="ALL">-- Tất cả chuyên quản --</option>
+              <option value="ALL">-- Tất cả CQ TCT --</option>
             </select>
           </div>
 
-          <!-- Lọc Tỉnh -->
+          <!-- Lọc Đơn vị / BĐT -->
           <div>
-            <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">ĐƠN VỊ / TỈNH:</label>
-            <select id="provinceFilter" onchange="applyFilters()" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600">
+            <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">CQ BĐT (ĐƠN VỊ):</label>
+            <select id="provinceFilter" onchange="applyFilters(true)" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600">
               <option value="ALL">-- Tất cả đơn vị --</option>
             </select>
           </div>
 
-          <!-- Lọc theo Số khoản / Tỉnh (Chỉ Layer 1 TCT và Layer 2 CQ thấy) -->
+          <!-- Lọc theo Số khoản / Tỉnh -->
           <div id="colLoanRangeFilter">
             <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">SỐ KHOẢN / TỈNH:</label>
-            <select id="loanRangeFilter" onchange="applyFilters()" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600">
+            <select id="loanRangeFilter" onchange="applyFilters(true)" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600">
               <option value="ALL">-- Tất cả quy mô --</option>
               <option value="1-10">1 - 10 khoản</option>
               <option value="11-20">11 - 20 khoản</option>
@@ -242,24 +251,22 @@
             </select>
           </div>
 
-          <!-- Lọc Tiến độ đôn đốc -->
+          <!-- E. Lọc Tiến độ đôn đốc theo Rule mới -->
           <div>
-            <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">TIẾN ĐỘ ĐÔN ĐỐC:</label>
-            <select id="statusFilter" onchange="applyFilters()" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600">
-              <option value="ALL">-- Tất cả tiến độ --</option>
-              <option value="TCT_CHUA">CQCQTCT: Chưa gửi CQT</option>
-              <option value="TCT_DA">CQCQTCT: Đã gửi CQT</option>
-              <option value="CQT_CHUA">CQT: Chưa gửi NVKD</option>
-              <option value="CQT_DA">CQT: Đã gửi NVKD</option>
-              <option value="NVKD_CHUA">NVKD: Chưa nhắn tin KH</option>
-              <option value="NVKD_DA">NVKD: Đã nhắn tin KH</option>
+            <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">TRẠNG THÁI GỬI:</label>
+            <select id="statusFilter" onchange="applyFilters(true)" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600">
+              <option value="ALL">-- Tất cả trạng thái --</option>
+              <option value="CQ_TCT_CHUA">CQ TCT tới CQ BĐT: Chưa gửi</option>
+              <option value="CQ_TCT_DA">CQ TCT tới CQ BĐT: Đã gửi</option>
+              <option value="CQ_BDT_CHUA">CQ BĐT tới NVKD: Chưa gửi</option>
+              <option value="CQ_BDT_DA">CQ BĐT tới NVKD: Đã gửi</option>
             </select>
           </div>
 
           <!-- Lọc Phản hồi khách hàng -->
           <div>
-            <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">PHẢN HỒI TỪ KHÁCH:</label>
-            <select id="feedbackFilter" onchange="applyFilters()" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600">
+            <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">PHẢN HỒI GẦN NHẤT:</label>
+            <select id="feedbackFilter" onchange="applyFilters(true)" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded px-1.5 py-1 focus:outline-indigo-600">
               <option value="ALL">-- Tất cả phản hồi --</option>
               <option value="CHUA_LIEN_HE">Chưa liên hệ / Chưa có</option>
               <option value="KHONG_NGHE">Không nghe máy / Thuê bao</option>
@@ -267,18 +274,19 @@
               <option value="HEN_TRA">Khách hẹn ngày thanh toán</option>
               <option value="DA_TRA">Khách đã nộp tiền / Tra soát</option>
               <option value="TIEU_CUC">Thách thức / Chửi bậy / Thóa mạ</option>
+              <option value="KHAC">Khác</option>
             </select>
           </div>
 
           <!-- Tìm kiếm nhanh -->
           <div class="col-span-2 sm:col-span-1">
             <label class="text-[10px] font-bold text-indigo-950 block mb-0.5">TÌM KIẾM NHANH:</label>
-            <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Tên KH, SĐT, HĐ, NVKD..." 
+            <input type="text" id="searchInput" oninput="applyFilters(true)" placeholder="Tên KH, SĐT, HĐ, NVKD..." 
                    class="w-full text-[11px] px-2 py-1 bg-slate-50 border border-slate-300 rounded focus:outline-indigo-600">
           </div>
         </div>
 
-        <!-- THANH THAO TÁC HÀNG LOẠT & ĐẢO TRẠNG THÁI -->
+        <!-- THANH THAO TÁC HÀNG LOẠT -->
         <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center text-xs text-slate-500 pt-1.5 border-t border-slate-100 gap-2">
           <div class="flex items-center gap-2 flex-wrap">
             <span>Lọc: <b id="filteredCount" class="text-indigo-700">0</b> / <span id="totalCount">0</span> hồ sơ</span>
@@ -292,83 +300,131 @@
                 <i class="fa-solid fa-xmark text-rose-500"></i> Bỏ tick
               </button>
 
-              <!-- KHỐI DÀNH RIÊNG CHO TCT (Layer 1): Chỉ đổi trạng thái CQTCT gửi CQT -->
-              <div id="bulkGroupTCT" class="flex items-center gap-1 border-l border-amber-300 pl-1">
-                <button onclick="applyBulkStatusUpdate('tctStatus', 'DA_GUI')" class="px-2 py-0.5 bg-indigo-700 hover:bg-indigo-800 text-white rounded text-[10px] font-semibold transition flex items-center gap-1" title="Đánh dấu TCT đã gửi cho các khoản đã tick">
-                  <i class="fa-solid fa-paper-plane text-[9px]"></i> CQTCT: Đã gửi
+              <!-- Thao tác cho CQ TCT (Layer 2) hoặc Admin -->
+              <div id="bulkGroupCQTCT" class="flex items-center gap-1 border-l border-amber-300 pl-1">
+                <button onclick="applyBulkStatusUpdate('cqTctStatus', 'DA_GUI')" class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-semibold transition flex items-center gap-1" title="CQ TCT xác nhận Đã gửi tới CQ BĐT">
+                  <i class="fa-solid fa-paper-plane text-[9px]"></i> CQ TCT: Đã gửi
                 </button>
-                <button onclick="applyBulkStatusUpdate('tctStatus', 'CHUA_GUI')" class="px-2 py-0.5 bg-slate-200 hover:bg-rose-100 text-slate-700 hover:text-rose-700 rounded text-[10px] font-semibold transition flex items-center gap-1" title="Đảo trạng thái TCT về Chưa gửi (khi tick nhầm)">
-                  <i class="fa-solid fa-rotate-left text-[9px]"></i> CQTCT: Chưa gửi
+                <button onclick="applyBulkStatusUpdate('cqTctStatus', 'CHUA_GUI')" class="px-2 py-0.5 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded text-[10px] font-semibold transition flex items-center gap-1" title="Đảo trạng thái CQ TCT về Chưa gửi">
+                  <i class="fa-solid fa-rotate-left text-[9px]"></i> CQ TCT: Chưa gửi
                 </button>
               </div>
 
-              <!-- KHỐI DÀNH CHO CƠ SỞ / ĐƠN VỊ TỈNH / CHUYÊN QUẢN: Đổi trạng thái CQT và NVKD -->
-              <div id="bulkGroupUnit" class="hidden items-center gap-1 border-l border-amber-300 pl-1">
-                <button onclick="applyBulkStatusUpdate('cqtStatus', 'DA_GUI')" class="px-2 py-0.5 bg-blue-700 hover:bg-blue-800 text-white rounded text-[10px] font-semibold transition" title="CQT xác nhận đã chuyển cho NVKD">
-                  CQT: Đã gửi
+              <!-- Thao tác cho CQ BĐT (Layer 3) -->
+              <div id="bulkGroupCQBDT" class="hidden items-center gap-1 border-l border-amber-300 pl-1">
+                <button onclick="applyBulkStatusUpdate('cqBdtStatus', 'DA_GUI')" class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-semibold transition" title="CQ BĐT xác nhận Đã gửi NVKD">
+                  CQ BĐT: Đã gửi
                 </button>
-                <button onclick="applyBulkStatusUpdate('cqtStatus', 'CHUA_GUI')" class="px-1.5 py-0.5 bg-slate-200 hover:bg-rose-100 text-slate-700 hover:text-rose-700 rounded text-[10px] font-semibold transition" title="Đảo trạng thái CQT về Chưa gửi">
-                  <i class="fa-solid fa-rotate-left"></i> CQT
-                </button>
-                <button onclick="applyBulkStatusUpdate('nvkdStatus', 'DA_NHAN')" class="px-2 py-0.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-[10px] font-semibold transition" title="NVKD xác nhận đã nhắn tin cho KH">
-                  NVKD: Đã nhắn
-                </button>
-                <button onclick="applyBulkStatusUpdate('nvkdStatus', 'CHUA_NHAN')" class="px-1.5 py-0.5 bg-slate-200 hover:bg-rose-100 text-slate-700 hover:text-rose-700 rounded text-[10px] font-semibold transition" title="Đảo trạng thái NVKD về Chưa nhắn">
-                  <i class="fa-solid fa-rotate-left"></i> NVKD
+                <button onclick="applyBulkStatusUpdate('cqBdtStatus', 'CHUA_GUI')" class="px-1.5 py-0.5 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded text-[10px] font-semibold transition" title="Đảo trạng thái CQ BĐT về Chưa gửi">
+                  <i class="fa-solid fa-rotate-left"></i> CQ BĐT: Chưa gửi
                 </button>
               </div>
             </div>
           </div>
 
           <div class="flex items-center gap-1.5 flex-wrap bg-slate-100 p-1 rounded-xl border border-slate-200">
-            <span class="text-[10px] font-bold text-slate-600 px-1 hidden sm:inline"><i class="fa-solid fa-clone text-indigo-600"></i> Xuất tin nhắn:</span>
+            <span class="text-[10px] font-bold text-slate-600 px-1 hidden sm:inline"><i class="fa-solid fa-clone text-indigo-600"></i> Tin nhắn:</span>
             <button onclick="copySelectedReminders()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1.5" title="Chép tất cả các bản tin đang được tick chọn">
               <i class="fa-solid fa-copy text-xs"></i> Copy Đã Chọn (<span id="btnCopySelectedNum" class="text-amber-300 font-extrabold">0</span>)
             </button>
-            <button onclick="copyCurrentUnitBatchReminders()" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-indigo-950 text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1.5" title="Chép toàn bộ bản tin trong danh sách đang lọc">
-              <i class="fa-solid fa-paste text-xs"></i> Copy Toàn Bộ Bản Tin
+            <button onclick="copyCurrentUnitBatchReminders()" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-indigo-950 text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1.5" title="Chép toàn bộ bản tin trong trang hoặc danh sách lọc">
+              <i class="fa-solid fa-paste text-xs"></i> Copy Toàn Bộ
             </button>
           </div>
         </div>
       </div>
 
-      <!-- BẢNG DỮ LIỆU VỪA KHÍT 1 TRANG -->
+      <!-- C. BẢNG DỮ LIỆU CÓ PHÂN TRANG (500 HỢP ĐỒNG / TRANG) & SẮP XẾP A-Z, Z-A -->
       <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="table-container custom-scroll overflow-y-auto max-h-[580px]">
+        <div class="table-container custom-scroll overflow-y-auto max-h-[590px]">
           <table class="w-full text-left text-[11px] border-collapse table-fixed">
             <colgroup>
-              <col style="width: 32px;">  <!-- Checkbox -->
-              <col style="width: 30px;">  <!-- STT -->
-              <col style="width: 13%;">   <!-- Đơn vị & Chuyên quản -->
-              <col style="width: 14%;">   <!-- Khách hàng & HĐ -->
-              <col style="width: 11%;">   <!-- Tiền cần thu & Dư nợ -->
-              <col style="width: 7%;">    <!-- Quá hạn -->
-              <col style="width: 12%;">   <!-- NVKD Phụ trách -->
-              <col style="width: 18%;">   <!-- Bản tin nhắc nợ -->
-              <col style="width: 25%;">   <!-- Cập nhật đôn đốc 3 layer + Nút Lưu Ghi chú -->
+              <col style="width: 30px;">  <!-- Checkbox -->
+              <col style="width: 32px;">  <!-- STT -->
+              <col style="width: 12%;">   <!-- CQ & CQ BĐT -->
+              <col style="width: 17%;">   <!-- Khách hàng, HĐ & Sản phẩm -->
+              <col style="width: 12%;">   <!-- Tiền cần thu & Dư nợ (Filter) -->
+              <col style="width: 8%;">    <!-- Quá hạn (Filter) -->
+              <col style="width: 11%;">   <!-- NVKD Phụ trách -->
+              <col style="width: 16%;">   <!-- Bản tin nhắc nợ -->
+              <col style="width: 24%;">   <!-- Đôn đốc & Phản hồi 3 lần -->
             </colgroup>
-            <thead class="bg-slate-100 text-slate-700 font-semibold sticky top-0 shadow-sm z-10 border-b border-slate-200">
+            <thead class="bg-slate-100 text-slate-700 font-semibold sticky top-0 shadow-sm z-10 border-b border-slate-200 select-none">
               <tr>
                 <th class="p-1.5 text-center">
                   <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAllLoans(this.checked)" class="rounded text-indigo-600 cursor-pointer" title="Chọn / Bỏ chọn tất cả">
                 </th>
                 <th class="p-1.5 text-center">STT</th>
-                <th class="p-1.5">Đơn vị & CQ</th>
-                <th class="p-1.5">Khách hàng & HĐ</th>
-                <th class="p-1.5 text-right">Tiền cần thu</th>
-                <th class="p-1.5 text-center">Quá hạn</th>
-                <th class="p-1.5">NVKD Phụ trách</th>
+                <th class="p-1.5">CQ TCT & CQ BĐT</th>
+                <th class="p-1.5">Khách hàng, HĐ & Sản phẩm</th>
+                
+                <!-- A. TIỀN CẦN THU VỚI NÚT LỌC MŨI TÊN LÊN/XUỐNG -->
+                <th class="p-1.5 text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <span>Tiền cần thu</span>
+                    <div class="inline-flex flex-col text-[9px] leading-3">
+                      <button onclick="setSorting('outstandingDue', 'ASC')" title="Sắp xếp Bé đến Lớn (A -> Z)" class="hover:text-indigo-600 px-0.5" id="sortDueAsc">
+                        <i class="fa-solid fa-arrow-up"></i>
+                      </button>
+                      <button onclick="setSorting('outstandingDue', 'DESC')" title="Sắp xếp Lớn đến Bé (Z -> A)" class="hover:text-indigo-600 px-0.5" id="sortDueDesc">
+                        <i class="fa-solid fa-arrow-down"></i>
+                      </button>
+                    </div>
+                  </div>
+                </th>
+
+                <!-- A. QUÁ HẠN VỚI NÚT LỌC MŨI TÊN LÊN/XUỐNG -->
+                <th class="p-1.5 text-center">
+                  <div class="flex items-center justify-center gap-1">
+                    <span>Quá hạn</span>
+                    <div class="inline-flex flex-col text-[9px] leading-3">
+                      <button onclick="setSorting('overdueDays', 'ASC')" title="Sắp xếp Bé đến Lớn (A -> Z)" class="hover:text-indigo-600 px-0.5" id="sortDaysAsc">
+                        <i class="fa-solid fa-arrow-up"></i>
+                      </button>
+                      <button onclick="setSorting('overdueDays', 'DESC')" title="Sắp xếp Lớn đến Bé (Z -> A)" class="hover:text-indigo-600 px-0.5" id="sortDaysDesc">
+                        <i class="fa-solid fa-arrow-down"></i>
+                      </button>
+                    </div>
+                  </div>
+                </th>
+
+                <th class="p-1.5">NVKD Gắn HĐ</th>
                 <th class="p-1.5">Bản tin nhắc nợ</th>
                 <th class="p-1.5 bg-indigo-50/80 border-l border-slate-200">
                   <div class="flex items-center justify-between">
-                    <span class="text-indigo-950 font-bold">Cập nhật đôn đốc & Phản hồi KH</span>
-                    <span class="text-[9px] text-indigo-700 font-semibold"><i class="fa-solid fa-floppy-disk mr-0.5"></i>Có nút Lưu ghi chú</span>
+                    <span class="text-indigo-950 font-bold">Quy trình đôn đốc & Phản hồi KH</span>
+                    <span class="text-[9px] text-indigo-700 font-semibold"><i class="fa-solid fa-layer-group mr-0.5"></i>Tối đa 3 lần</span>
                   </div>
                 </th>
               </tr>
             </thead>
             <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
           </table>
+        </div>
+
+        <!-- C. THANH ĐIỀU HƯỚNG PHÂN TRANG (500 HỢP ĐỒNG / TRANG) -->
+        <div class="p-2 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-600 gap-2">
+          <div class="flex items-center gap-2">
+            <span>Hiển thị: <b id="pageDisplayRange">0 - 0</b> / <b id="pageTotalItems">0</b> hợp đồng</span>
+            <span class="text-slate-300">|</span>
+            <span>Quy mô: <b>500 hợp đồng/trang</b></span>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button onclick="changePage('first')" id="btnFirstPage" class="px-2 py-1 bg-white border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed">
+              <i class="fa-solid fa-angles-left"></i>
+            </button>
+            <button onclick="changePage('prev')" id="btnPrevPage" class="px-2 py-1 bg-white border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed">
+              <i class="fa-solid fa-chevron-left"></i> Trước
+            </button>
+            <span class="px-2 font-bold text-indigo-900">Trang <span id="currentPageNum">1</span> / <span id="totalPagesNum">1</span></span>
+            <button onclick="changePage('next')" id="btnNextPage" class="px-2 py-1 bg-white border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed">
+              Sau <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            <button onclick="changePage('last')" id="btnLastPage" class="px-2 py-1 bg-white border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed">
+              <i class="fa-solid fa-angles-right"></i>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -403,12 +459,12 @@
             <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 text-slate-600 font-semibold">
               <tr>
                 <th class="p-1.5 text-center">Hạng</th>
-                <th class="p-1.5">Tên Đơn vị</th>
+                <th class="p-1.5">Tên Đơn vị (CQ BĐT)</th>
                 <th class="p-1.5 text-center">Số khoản</th>
                 <th class="p-1.5 text-right">Tổng nợ cần thu</th>
                 <th class="p-1.5 text-right">Tổng dư nợ gốc</th>
-                <th class="p-1.5 text-center">Đã gửi CQT</th>
-                <th class="p-1.5 text-center">Đã gửi NVKD</th>
+                <th class="p-1.5 text-center">CQ TCT đã gửi</th>
+                <th class="p-1.5 text-center">CQ BĐT đã gửi</th>
               </tr>
             </thead>
             <tbody id="unitRankingTableBody" class="divide-y divide-slate-100"></tbody>
@@ -490,9 +546,9 @@
         <div>
           <h2 class="font-bold text-xs sm:text-sm text-slate-800 flex items-center gap-2">
             <i class="fa-solid fa-timeline text-indigo-600"></i>
-            QUẢN TRỊ TIẾN ĐỘ ĐÔN ĐỐC 3 CẤP & PHẢN HỒI KHÁCH HÀNG
+            QUẢN TRỊ TIẾN ĐỘ ĐÔN ĐỐC & PHẢN HỒI KHÁCH HÀNG
           </h2>
-          <p class="text-[11px] text-slate-500">So sánh khối lượng tác nghiệp giữa <b>Hôm nay (<span id="lblTodayDate"></span>)</b> và <b>Hôm qua (<span id="lblYesterdayDate"></span>)</b></p>
+          <p class="text-[11px] text-slate-500">Theo dõi tiến độ chuyển tiếp giữa các cấp và phản hồi của khách hàng</p>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           <button onclick="exportDailyRemindersReportExcel()" class="bg-indigo-900 hover:bg-indigo-800 text-amber-300 text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
@@ -502,84 +558,60 @@
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-        <!-- 1. CQTCT gửi CQT -->
+        <!-- 1. TCT đã chuyển CQ TCT -->
         <div class="bg-white p-3 rounded-xl border border-indigo-100 shadow-sm border-l-4 border-l-indigo-600">
           <div class="flex items-center justify-between text-indigo-950 font-bold text-xs mb-1.5">
-            <span>CQTCT GỬI CQT</span>
+            <span>TCT ĐÃ CHUYỂN CQ TCT</span>
             <i class="fa-solid fa-building-columns text-indigo-500"></i>
           </div>
-          <div class="grid grid-cols-2 gap-2 text-center pt-1 border-t border-slate-100">
-            <div class="bg-indigo-50/60 p-1.5 rounded-lg">
-              <span class="text-[10px] text-slate-500 block">Hôm nay</span>
-              <span id="statTctToday" class="text-lg font-bold text-indigo-700">0</span>
-              <span class="text-[9px] text-slate-400 block">lượt gửi</span>
-            </div>
-            <div class="bg-slate-50 p-1.5 rounded-lg">
-              <span class="text-[10px] text-slate-500 block">Hôm qua</span>
-              <span id="statTctYesterday" class="text-lg font-bold text-slate-600">0</span>
-              <span class="text-[9px] text-slate-400 block">lượt gửi</span>
-            </div>
-          </div>
-          <div class="mt-2 text-[10px] text-slate-500 flex justify-between">
-            <span>Tăng/Giảm so với hôm qua:</span>
-            <b id="diffTct" class="text-emerald-600 font-bold">+0</b>
+          <div class="text-center py-2 bg-indigo-50/50 rounded-lg">
+            <span id="statTctTransferred" class="text-2xl font-black text-indigo-700">0</span>
+            <span class="text-[10px] text-slate-500 block">khoản nợ tự động chuyển khi import</span>
           </div>
         </div>
 
-        <!-- 2. CQT gửi NVKD -->
+        <!-- 2. CQ TCT gửi CQ BĐT -->
         <div class="bg-white p-3 rounded-xl border border-blue-100 shadow-sm border-l-4 border-l-blue-600">
           <div class="flex items-center justify-between text-blue-950 font-bold text-xs mb-1.5">
-            <span>CQT GỬI NVKD</span>
+            <span>CQ TCT GỬI CQ BĐT</span>
             <i class="fa-solid fa-share-nodes text-blue-500"></i>
           </div>
           <div class="grid grid-cols-2 gap-2 text-center pt-1 border-t border-slate-100">
-            <div class="bg-blue-50/60 p-1.5 rounded-lg">
-              <span class="text-[10px] text-slate-500 block">Hôm nay</span>
-              <span id="statCqtToday" class="text-lg font-bold text-blue-700">0</span>
-              <span class="text-[9px] text-slate-400 block">lượt gửi</span>
+            <div class="bg-emerald-50 p-1.5 rounded-lg">
+              <span class="text-[10px] text-slate-500 block">Đã gửi (Xanh)</span>
+              <span id="statCqTctDaGui" class="text-lg font-bold text-emerald-700">0</span>
             </div>
-            <div class="bg-slate-50 p-1.5 rounded-lg">
-              <span class="text-[10px] text-slate-500 block">Hôm qua</span>
-              <span id="statCqtYesterday" class="text-lg font-bold text-slate-600">0</span>
-              <span class="text-[9px] text-slate-400 block">lượt gửi</span>
+            <div class="bg-rose-50 p-1.5 rounded-lg">
+              <span class="text-[10px] text-slate-500 block">Chưa gửi (Đỏ)</span>
+              <span id="statCqTctChuaGui" class="text-lg font-bold text-rose-700">0</span>
             </div>
-          </div>
-          <div class="mt-2 text-[10px] text-slate-500 flex justify-between">
-            <span>Tăng/Giảm so với hôm qua:</span>
-            <b id="diffCqt" class="text-blue-600 font-bold">+0</b>
           </div>
         </div>
 
-        <!-- 3. NVKD nhắn tin cho KH -->
+        <!-- 3. CQ BĐT gửi NVKD -->
         <div class="bg-white p-3 rounded-xl border border-emerald-100 shadow-sm border-l-4 border-l-emerald-600">
           <div class="flex items-center justify-between text-emerald-950 font-bold text-xs mb-1.5">
-            <span>NVKD ĐÃ NHẮN TIN KH</span>
-            <i class="fa-solid fa-comment-sms text-emerald-500"></i>
+            <span>CQ BĐT GỬI NVKD</span>
+            <i class="fa-solid fa-user-check text-emerald-500"></i>
           </div>
           <div class="grid grid-cols-2 gap-2 text-center pt-1 border-t border-slate-100">
-            <div class="bg-emerald-50/60 p-1.5 rounded-lg">
-              <span class="text-[10px] text-slate-500 block">Hôm nay</span>
-              <span id="statNvkdToday" class="text-lg font-bold text-emerald-700">0</span>
-              <span class="text-[9px] text-slate-400 block">lượt nhắn</span>
+            <div class="bg-emerald-50 p-1.5 rounded-lg">
+              <span class="text-[10px] text-slate-500 block">Đã gửi (Xanh)</span>
+              <span id="statCqBdtDaGui" class="text-lg font-bold text-emerald-700">0</span>
             </div>
-            <div class="bg-slate-50 p-1.5 rounded-lg">
-              <span class="text-[10px] text-slate-500 block">Hôm qua</span>
-              <span id="statNvkdYesterday" class="text-lg font-bold text-slate-600">0</span>
-              <span class="text-[9px] text-slate-400 block">lượt nhắn</span>
+            <div class="bg-rose-50 p-1.5 rounded-lg">
+              <span class="text-[10px] text-slate-500 block">Chưa gửi (Đỏ)</span>
+              <span id="statCqBdtChuaGui" class="text-lg font-bold text-rose-700">0</span>
             </div>
-          </div>
-          <div class="mt-2 text-[10px] text-slate-500 flex justify-between">
-            <span>Tăng/Giảm so với hôm qua:</span>
-            <b id="diffNvkd" class="text-emerald-600 font-bold">+0</b>
           </div>
         </div>
       </div>
 
-      <!-- Phân tích cơ cấu phản hồi của Khách Hàng khi NVKD gửi tin nhắn -->
+      <!-- Phân tích cơ cấu phản hồi của Khách Hàng -->
       <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
         <h3 class="font-bold text-xs text-slate-800 mb-2 flex items-center gap-1.5">
           <i class="fa-solid fa-comments text-amber-500"></i>
-          KẾT QUẢ KHÁCH HÀNG PHẢN HỒI KHI NVKD LIÊN HỆ ĐÔN ĐỐC
+          KẾT QUẢ KHÁCH HÀNG PHẢN HỒI (TỔNG HỢP CÁC LẦN)
         </h3>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-center">
           <div class="bg-amber-50 p-2 rounded-lg border border-amber-200">
@@ -614,66 +646,23 @@
           </div>
         </div>
       </div>
-
-      <!-- Bảng Quản trị chi tiết từng Đơn vị/Tỉnh -->
-      <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-        <div class="flex justify-between items-center mb-2">
-          <h3 class="font-bold text-xs text-slate-800 flex items-center gap-1.5">
-            <i class="fa-solid fa-list-check text-indigo-600"></i>
-            CHI TIẾT SỐ LẦN ĐÔN ĐỐC & KẾT QUẢ THEO TỪNG ĐƠN VỊ
-          </h3>
-          <span class="text-[10px] text-slate-400 font-mono">Đơn vị: lượt khoản vay</span>
-        </div>
-        <div class="overflow-y-auto custom-scroll max-h-[380px]">
-          <table class="w-full text-xs text-left border-collapse table-fixed">
-            <colgroup>
-              <col style="width: 35px;">   <!-- STT -->
-              <col style="width: 22%;">   <!-- Tên Đơn vị -->
-              <col style="width: 9%;">    <!-- Tổng khoản -->
-              <col style="width: 13%;">   <!-- TCT (Nay / Qua) -->
-              <col style="width: 13%;">   <!-- CQT (Nay / Qua) -->
-              <col style="width: 13%;">   <!-- NVKD (Nay / Qua) -->
-              <col style="width: 15%;">   <!-- Hẹn trả & Đã trả -->
-              <col style="width: 15%;">   <!-- Rủi ro (Đổi số / Tiêu cực) -->
-            </colgroup>
-            <thead class="bg-slate-100 text-slate-700 font-semibold sticky top-0 border-b border-slate-200 text-[11px]">
-              <tr>
-                <th class="p-1.5 text-center">STT</th>
-                <th class="p-1.5">Tên Đơn vị</th>
-                <th class="p-1.5 text-center">Số khoản</th>
-                <th class="p-1.5 text-center bg-indigo-50/50">TCT gửi<br><span class="text-[9px] font-normal text-slate-500">(Hôm nay / Hôm qua)</span></th>
-                <th class="p-1.5 text-center bg-blue-50/50">CQT gửi<br><span class="text-[9px] font-normal text-slate-500">(Hôm nay / Hôm qua)</span></th>
-                <th class="p-1.5 text-center bg-emerald-50/50">NVKD nhắn<br><span class="text-[9px] font-normal text-slate-500">(Hôm nay / Hôm qua)</span></th>
-                <th class="p-1.5 text-center text-emerald-800">Tích cực<br><span class="text-[9px] font-normal text-slate-500">(Hẹn trả / Đã nộp)</span></th>
-                <th class="p-1.5 text-center text-rose-800">Rủi ro cao<br><span class="text-[9px] font-normal text-slate-500">(Đổi số / Tiêu cực)</span></th>
-              </tr>
-            </thead>
-            <tbody id="dailyRemindersTableBody" class="divide-y divide-slate-100"></tbody>
-          </table>
-        </div>
-      </div>
     </div>
 
-  
-    <!-- ==================== VIEW 4: BÁO CÁO HIỆU QUẢ THU HỒI NỢ & THEO DÕI NỢ ĐÃ THANH TOÁN ==================== -->
+    <!-- ==================== VIEW 4: HIỆU QUẢ THU HỒI NỢ ==================== -->
     <div id="viewEffectiveness" class="hidden space-y-3">
-      <!-- Header View 4 -->
       <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
         <div>
           <h2 class="font-bold text-xs sm:text-sm text-slate-800 flex items-center gap-2">
             <i class="fa-solid fa-chart-line text-emerald-600"></i>
-            QUẢN TRỊ HIỆU QUẢ THU HỒI NỢ & ĐỐI SOÁT KHOẢN VAY ĐÃ THANH TOÁN
+            QUẢN TRỊ HIỆU QUẢ THU HỒI NỢ & ĐỐI SOÁT TẤT TOÁN
           </h2>
           <p class="text-[11px] text-slate-500">So sánh đối soát giữa các file import: HĐ không còn xuất hiện được xác nhận <b>đã thanh toán thành công</b></p>
         </div>
-        <div class="flex items-center gap-2 flex-wrap">
-          <button onclick="exportSettledLoans()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
-            <i class="fa-solid fa-file-excel"></i> Xuất Danh Sách HĐ Đã Thu Hồi Thành Công
-          </button>
-        </div>
+        <button onclick="exportSettledLoans()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
+          <i class="fa-solid fa-file-excel"></i> Xuất Danh Sách HĐ Đã Thu Hồi
+        </button>
       </div>
 
-      <!-- Thẻ KPI Hiệu quả thu hồi nợ -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         <div class="bg-white p-3 rounded-xl border border-emerald-200 bg-emerald-50/20 shadow-sm">
           <div class="flex justify-between items-center text-emerald-700 text-[10px] font-semibold uppercase">
@@ -704,41 +693,11 @@
 
         <div class="bg-white p-3 rounded-xl border border-amber-200 bg-amber-50/20 shadow-sm">
           <div class="flex justify-between items-center text-amber-700 text-[10px] font-semibold uppercase">
-            <span>Thu hồi sau Lần 3+ (Cảnh báo)</span>
+            <span>Thu hồi sau Lần 3+</span>
             <i class="fa-solid fa-gavel text-amber-600"></i>
           </div>
           <div id="kpiSettledLate" class="text-2xl font-bold text-amber-700 mt-0.5">0%</div>
           <div id="kpiSettledLateCount" class="text-[10px] text-slate-500">0 / 0 khoản đôn đốc sâu</div>
-        </div>
-      </div>
-
-      <!-- Bảng Phân Tích Hiệu Quả Thu Hồi Theo Từng Lần Đôn Đốc -->
-      <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-        <h3 class="font-bold text-xs text-slate-800 mb-2 flex items-center gap-1.5">
-          <i class="fa-solid fa-filter-circle-dollar text-indigo-600"></i>
-          PHÂN BỔ HIỆU QUẢ THEO TẦN SUẤT BẢN TIN NHẮC NỢ
-        </h3>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
-          <div class="p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/30">
-            <span class="text-[11px] font-bold text-emerald-900 block">Sau Nhắc Nợ Lần 1</span>
-            <span id="rateL1" class="text-lg font-black text-emerald-700 block mt-0.5">0</span>
-            <span class="text-[10px] text-slate-500">khoản tất toán</span>
-          </div>
-          <div class="p-2.5 rounded-lg border border-blue-200 bg-blue-50/30">
-            <span class="text-[11px] font-bold text-blue-900 block">Sau Đôn Đốc Lần 2</span>
-            <span id="rateL2" class="text-lg font-black text-blue-700 block mt-0.5">0</span>
-            <span class="text-[10px] text-slate-500">khoản tất toán</span>
-          </div>
-          <div class="p-2.5 rounded-lg border border-amber-200 bg-amber-50/30">
-            <span class="text-[11px] font-bold text-amber-900 block">Sau Cảnh Báo Lần 3</span>
-            <span id="rateL3" class="text-lg font-black text-amber-700 block mt-0.5">0</span>
-            <span class="text-[10px] text-slate-500">khoản tất toán</span>
-          </div>
-          <div class="p-2.5 rounded-lg border border-rose-200 bg-rose-50/30">
-            <span class="text-[11px] font-bold text-rose-900 block">Sau Răn Đe Lần 4 Trở Lên</span>
-            <span id="rateL4" class="text-lg font-black text-rose-700 block mt-0.5">0</span>
-            <span class="text-[10px] text-slate-500">khoản tất toán</span>
-          </div>
         </div>
       </div>
 
@@ -783,10 +742,9 @@
 
   </main>
 
-  <!-- ==================== YÊU CẦU 3: MODAL TÍCH HỢP QUẢN TRỊ HỆ THỐNG TCT (UNIFIED ADMIN CENTER) ==================== -->
+  <!-- ==================== MODAL TÍCH HỢP QUẢN TRỊ HỆ THỐNG TCT ==================== -->
   <div id="unifiedAdminModal" class="hidden fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-3">
     <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full p-5 border border-slate-200 max-h-[92vh] flex flex-col">
-      <!-- Modal Header -->
       <div class="flex justify-between items-center pb-3 border-b border-slate-200">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-amber-400 text-indigo-950 flex items-center justify-center text-lg font-black shadow">
@@ -794,66 +752,62 @@
           </div>
           <div>
             <h3 class="font-bold text-base text-slate-800">TRUNG TÂM QUẢN TRỊ HỆ THỐNG TỔNG CÔNG TY</h3>
-            <p class="text-[11px] text-slate-500">Quản trị toàn diện: Chuyên quản (Layer 2), 52 Đơn vị (Layer 3) và Kết nối Online</p>
+            <p class="text-[11px] text-slate-500">Quản trị phân công CQ TCT và tài khoản 52 đơn vị BĐT</p>
           </div>
         </div>
         <button onclick="closeUnifiedAdminModal()" class="text-slate-400 hover:text-slate-600 text-xl"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <!-- Navigation Tabs bên trong Modal Quản Trị -->
       <div class="flex border-b border-slate-200 mt-2 space-x-2">
         <button id="adminTabBtn1" onclick="switchAdminModalTab('officers')" class="py-2 px-3 text-xs font-bold border-b-2 border-indigo-600 text-indigo-700 flex items-center gap-1.5">
-          <i class="fa-solid fa-user-shield text-blue-600"></i> 1. Chuyên Quản (Layer 2)
+          <i class="fa-solid fa-user-shield text-blue-600"></i> 1. CQ TCT (Chuyên Quản)
         </button>
         <button id="adminTabBtn2" onclick="switchAdminModalTab('units')" class="py-2 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5">
-          <i class="fa-solid fa-users-gear text-amber-500"></i> 2. 52 Đơn Vị (Layer 3)
+          <i class="fa-solid fa-users-gear text-amber-500"></i> 2. CQ BĐT (52 Đơn Vị)
         </button>
         <button id="adminTabBtn3" onclick="switchAdminModalTab('online')" class="py-2 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5">
-          <i class="fa-solid fa-cloud text-indigo-500"></i> 3. Cấu Hình Online Firebase
+          <i class="fa-solid fa-cloud text-indigo-500"></i> 3. Cấu Hình Firebase Online
         </button>
       </div>
 
-      <!-- TAB 1: QUẢN TRỊ CHUYÊN QUẢN (LAYER 2) -->
+      <!-- TAB 1: CQ TCT -->
       <div id="adminModalViewOfficers" class="flex-1 overflow-y-auto custom-scroll py-3 space-y-3">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-indigo-50/60 p-2.5 rounded-xl border border-indigo-100">
           <div class="flex items-center gap-2">
-            <label class="text-xs font-bold text-indigo-950">Số lượng chuyên quản:</label>
+            <label class="text-xs font-bold text-indigo-950">Số lượng CQ TCT:</label>
             <select id="officerCountSelect" onchange="onOfficerCountChange(this.value)" class="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1 font-bold text-indigo-700">
-              <option value="1">1 Chuyên quản</option>
-              <option value="2">2 Chuyên quản</option>
-              <option value="3">3 Chuyên quản</option>
-              <option value="4" selected>4 Chuyên quản (Mặc định)</option>
-              <option value="5">5 Chuyên quản</option>
-              <option value="6">6 Chuyên quản</option>
-              <option value="7">7 Chuyên quản</option>
-              <option value="8">8 Chuyên quản</option>
-              <option value="9">9 Chuyên quản</option>
-              <option value="10">10 Chuyên quản</option>
+              <option value="1">1 CQ TCT</option>
+              <option value="2">2 CQ TCT</option>
+              <option value="3">3 CQ TCT</option>
+              <option value="4" selected>4 CQ TCT</option>
+              <option value="5">5 CQ TCT</option>
+              <option value="6">6 CQ TCT</option>
+              <option value="8">8 CQ TCT</option>
+              <option value="10">10 CQ TCT</option>
             </select>
           </div>
           <div class="flex items-center gap-2">
             <button onclick="randomizeAllOfficerPasswords()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold px-2.5 py-1 rounded-lg shadow flex items-center gap-1">
-              <i class="fa-solid fa-dice"></i> Random Mật khẩu Tất Cả CQ
+              <i class="fa-solid fa-dice"></i> Random MK Tất Cả CQ TCT
             </button>
             <button onclick="saveOfficerConfig()" class="text-xs bg-indigo-900 hover:bg-indigo-800 text-amber-300 font-bold px-3 py-1 rounded-lg shadow flex items-center gap-1">
               <i class="fa-solid fa-floppy-disk"></i> Lưu Thay Đổi
             </button>
           </div>
         </div>
-
         <div id="officerListContainer" class="space-y-3"></div>
       </div>
 
-      <!-- TAB 2: QUẢN TRỊ 52 ĐƠN VỊ (LAYER 3) -->
+      <!-- TAB 2: 52 ĐƠN VỊ CQ BĐT -->
       <div id="adminModalViewUnits" class="hidden flex-1 overflow-y-auto custom-scroll py-3 space-y-3">
         <div class="flex justify-between items-center gap-2 flex-wrap">
           <input type="text" id="searchAccountInput" oninput="filterAccountsList()" placeholder="Tìm theo mã hoặc tên đơn vị..." class="text-xs p-1.5 bg-slate-50 border border-slate-300 rounded-lg w-64">
           <div class="flex gap-1.5">
             <button onclick="exportAccountsExcel()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-2.5 py-1.5 rounded-lg shadow flex items-center gap-1">
-              <i class="fa-solid fa-file-excel"></i> Xuất Excel Mật Khẩu 52 Đơn Vị
+              <i class="fa-solid fa-file-excel"></i> Xuất Excel Mật Khẩu
             </button>
             <button onclick="randomizeAllUnitPasswords()" class="text-xs bg-amber-500 hover:bg-amber-600 text-indigo-950 font-bold px-2.5 py-1.5 rounded-lg shadow flex items-center gap-1">
-              <i class="fa-solid fa-dice"></i> Random 6 Số Toàn Bộ 52 Đơn Vị
+              <i class="fa-solid fa-dice"></i> Random 6 Số Cho 52 Đơn Vị
             </button>
           </div>
         </div>
@@ -863,9 +817,9 @@
             <thead class="bg-slate-100 sticky top-0 border-b border-slate-200 text-slate-700 font-semibold">
               <tr>
                 <th class="p-2 text-center w-10">STT</th>
-                <th class="p-2 w-28">Mã bưu điện (Username)</th>
+                <th class="p-2 w-28">Mã BĐT (User)</th>
                 <th class="p-2">Tên Bưu điện tỉnh / thành phố</th>
-                <th class="p-2 w-36">Mật khẩu (6 số)</th>
+                <th class="p-2 w-36">Mật khẩu</th>
                 <th class="p-2 text-center w-36">Thao tác</th>
               </tr>
             </thead>
@@ -874,55 +828,21 @@
         </div>
       </div>
 
-      <!-- TAB 3: CẤU HÌNH ONLINE FIREBASE -->
+      <!-- TAB 3: FIREBASE ONLINE -->
       <div id="adminModalViewOnline" class="hidden flex-1 overflow-y-auto custom-scroll py-3 space-y-3">
         <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-2.5 text-xs text-slate-600">
-          <div class="space-y-2">
-            <div class="bg-amber-50 p-2.5 rounded-lg border border-amber-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-              <div>
-                <span class="text-[10px] text-amber-900 font-bold block">ĐƯỜNG LINK ONLINE CHUẨN ĐÃ CẤU HÌNH:</span>
-                <code class="text-xs font-bold text-indigo-700 font-mono select-all" id="officialOnlineUrl">https://thu-ho-f4950-default-rtdb.firebaseio.com</code>
-              </div>
-              <div class="flex gap-1.5 flex-wrap">
-                <button onclick="copyAndFillOnlineUrl()" class="px-2.5 py-1 bg-white hover:bg-slate-100 text-indigo-800 border border-indigo-300 rounded text-xs font-bold shadow-sm flex items-center gap-1 transition">
-                  <i class="fa-solid fa-copy text-indigo-600"></i> Copy & Dán vào ô
-                </button>
-                <button onclick="activateOnlineWorkingNow()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold shadow flex items-center gap-1 transition">
-                  <i class="fa-solid fa-bolt text-amber-300"></i> Kích hoạt Làm việc trực tuyến
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">Firebase Realtime Database URL:</label>
-              <input type="text" id="firebaseDbUrl" placeholder="https://thu-ho-f4950-default-rtdb.firebaseio.com" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono focus:outline-indigo-600 focus:bg-white font-bold text-indigo-900">
-              <span class="text-[10px] text-slate-400 mt-0.5 block">Hệ thống đã tự động gán đường link trực tuyến mặc định. Bạn chỉ cần bấm <b>Lưu & Tải file index.html mới</b> để triển khai cho toàn mạng lưới.</span>
-            </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Firebase Realtime Database URL:</label>
+            <input type="text" id="firebaseDbUrl" placeholder="https://thu-ho-f4950-default-rtdb.firebaseio.com" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono focus:outline-indigo-600 font-bold text-indigo-900">
           </div>
-
-          <div class="bg-indigo-50 p-2.5 rounded-lg border border-indigo-200 text-indigo-950 text-[11px] space-y-1">
-            <div class="font-bold flex items-center gap-1 text-indigo-900">
-              <i class="fa-solid fa-circle-check text-emerald-600"></i> Cơ chế cập nhật tự động toàn mạng lưới:
-            </div>
-            <p class="text-slate-600 leading-relaxed">
-              Khi Admin TCT nhập đường link này và bấm <b>Lưu & Tải file index.html mới</b>, mã nguồn tải về đã được nhúng sẵn link. Bạn chỉ cần tải đè file index.html này lên GitHub repo (tên miền <b>taichinhso.cloud</b>), thì <b>tất cả các máy tính của Chuyên quản và Đơn vị trên toàn quốc sẽ tự động kết nối Online ngay lập tức</b>.
-            </p>
-          </div>
-
           <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <button onclick="saveFirebaseConfigLocal()" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-300">
-              Lưu máy này
-            </button>
-            <button onclick="publishConfiguredHtmlForOnline()" class="px-3.5 py-1.5 rounded-lg bg-indigo-900 hover:bg-indigo-800 text-amber-300 font-bold text-xs shadow flex items-center gap-1.5" title="Tải file HTML đã gắn sẵn Firebase URL để up lên GitHub repo taichinhso.cloud">
-              <i class="fa-solid fa-cloud-arrow-up"></i> Lưu & Tải file index.html mới
-            </button>
+            <button onclick="saveFirebaseConfigLocal()" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-300">Lưu Máy Này</button>
           </div>
         </div>
       </div>
 
-      <!-- Modal Footer -->
       <div class="mt-3 pt-2.5 border-t border-slate-200 flex justify-end">
-        <button onclick="closeUnifiedAdminModal()" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold">Đóng Quản Trị</button>
+        <button onclick="closeUnifiedAdminModal()" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold">Đóng</button>
       </div>
     </div>
   </div>
@@ -954,7 +874,7 @@
     </div>
   </div>
 
-  <!-- Toast Popup (Hỗ trợ thông báo Thành công / Thất bại) -->
+  <!-- Toast Popup -->
   <div id="toast" class="fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-24 opacity-0 pointer-events-none">
     <div id="toastCard" class="bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs flex items-center gap-2.5 border border-slate-700 min-w-[280px] max-w-md">
       <div id="toastIconWrap" class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm shrink-0">
@@ -970,7 +890,7 @@
     </div>
   </div>
 
-  <!-- Modal Hỗ Trợ Xem & Sao Chép Bản Tin (Fallback Modal khi trình duyệt chặn quyền clipboard) -->
+  <!-- Modal Xem Trước Bản Tin -->
   <div id="copyPreviewModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3">
     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-5 border border-slate-200 flex flex-col max-h-[85vh]">
       <div class="flex justify-between items-center pb-2.5 border-b border-slate-200">
@@ -995,14 +915,102 @@
         <div class="flex gap-2">
           <button onclick="closeCopyPreviewModal()" class="px-3 py-1.5 border border-slate-300 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50">Đóng</button>
           <button onclick="copyFromModalTextarea()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow flex items-center gap-1.5">
-            <i class="fa-solid fa-copy"></i> Sao chép toàn bộ văn bản
+            <i class="fa-solid fa-copy"></i> Sao chép toàn bộ
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ==================== JAVASCRIPT HỆ THỐNG ==================== -->
+  <!-- Modal Lịch sử Đăng nhập -->
+  <div id="loginHistoryModal" class="hidden fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-3">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full p-5 border border-slate-200 max-h-[92vh] flex flex-col">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-200">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-800 flex items-center justify-center text-lg font-black shadow-sm">
+            <i class="fa-solid fa-users-viewfinder"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-slate-800">NHẬT KÝ & LỊCH SỬ ĐĂNG NHẬP CỦA 52 ĐƠN VỊ</h3>
+            <p class="text-[11px] text-slate-500">Giám sát chuyên cần: Kiểm tra đơn vị nào đã vào hệ thống làm việc hôm nay</p>
+          </div>
+        </div>
+        <button onclick="closeLoginHistoryModal()" class="text-slate-400 hover:text-slate-600 text-xl"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 my-3">
+        <div class="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-bold text-emerald-900 uppercase block">Đã vào làm việc hôm nay</span>
+            <div id="cntLoggedToday" class="text-xl font-black text-emerald-700">0 / 52</div>
+          </div>
+          <i class="fa-solid fa-circle-check text-emerald-500 text-2xl"></i>
+        </div>
+        <div class="bg-rose-50 p-2.5 rounded-xl border border-rose-200 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-bold text-rose-900 uppercase block">Chưa vào làm việc hôm nay</span>
+            <div id="cntNotLoggedToday" class="text-xl font-black text-rose-700">52 / 52</div>
+          </div>
+          <i class="fa-solid fa-circle-exclamation text-rose-500 text-2xl"></i>
+        </div>
+        <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-bold text-slate-700 uppercase block">Tổng lượt truy cập ghi nhận</span>
+            <div id="cntTotalLogins" class="text-xl font-black text-indigo-700">0 lượt</div>
+          </div>
+          <i class="fa-solid fa-chart-line text-indigo-500 text-2xl"></i>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row justify-between items-center gap-2 pb-2">
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <select id="filterLoginStatus" onchange="renderLoginHistoryTable()" class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 font-bold text-slate-700">
+            <option value="ALL">-- Tất cả 52 Đơn vị --</option>
+            <option value="LOGGED">✓ Đã vào hôm nay</option>
+            <option value="NOT_LOGGED">⚠ Chưa vào hôm nay</option>
+          </select>
+          <input type="text" id="searchLoginInput" oninput="renderLoginHistoryTable()" placeholder="Tìm theo mã hoặc tên tỉnh..." class="text-xs p-1.5 bg-slate-50 border border-slate-300 rounded-lg w-56">
+        </div>
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button onclick="exportLoginHistoryExcel()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-lg shadow flex items-center gap-1.5">
+            <i class="fa-solid fa-file-excel"></i> Xuất Báo Cáo Nhật Ký (Excel)
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-y-auto custom-scroll flex-1 border border-slate-200 rounded-lg max-h-[380px]">
+        <table class="w-full text-xs text-left border-collapse table-fixed">
+          <colgroup>
+            <col style="width: 40px;">
+            <col style="width: 90px;">
+            <col style="width: 25%;">
+            <col style="width: 18%;">
+            <col style="width: 18%;">
+            <col style="width: 10%;">
+            <col style="width: 15%;">
+          </colgroup>
+          <thead class="bg-slate-100 sticky top-0 border-b border-slate-200 text-slate-700 font-semibold text-[11px]">
+            <tr>
+              <th class="p-2 text-center">STT</th>
+              <th class="p-2">Mã BĐT</th>
+              <th class="p-2">Tên Bưu điện tỉnh / TP</th>
+              <th class="p-2">Lần đăng nhập gần nhất</th>
+              <th class="p-2">Thiết bị</th>
+              <th class="p-2 text-center">Số lượt</th>
+              <th class="p-2 text-center">Tình trạng hôm nay</th>
+            </tr>
+          </thead>
+          <tbody id="loginHistoryTableBody" class="divide-y divide-slate-100 font-mono text-[11px]"></tbody>
+        </table>
+      </div>
+
+      <div class="mt-3 pt-2.5 border-t border-slate-200 flex justify-end">
+        <button onclick="closeLoginHistoryModal()" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT XỬ LÝ TOÀN BỘ LOGIC ==================== -->
   <script>
     const UNIT_DEFINITIONS = [
       { stt: 1, code: "39000", name: "BĐT Hưng Yên" },
@@ -1067,21 +1075,30 @@
     let provinceLoanCounts = {};
     let isFirebaseActive = false;
     let firebaseDb = null;
+    let loginHistoryMap = {};
+
+    // C. Cấu hình phân trang 500 dòng/trang
+    const PAGE_SIZE = 500;
+    let currentPage = 1;
+
+    // A. Cấu hình sắp xếp
+    let sortColumn = null; // 'outstandingDue' | 'overdueDays'
+    let sortDirection = 'NONE'; // 'ASC' | 'DESC' | 'NONE'
 
     let officerList = [
-      { id: "CQ1", name: "Chuyên quản 1", assignedUnits: ["39000", "22000", "41000", "36000", "20000", "24000", "14000", "16000", "35000", "23000", "19000", "40000", "25000"] },
-      { id: "CQ2", name: "Chuyên quản 2", assignedUnits: ["10000", "75000", "50000", "66000", "48000", "98000", "44000", "67000", "65000", "27000", "28000"] },
-      { id: "CQ3", name: "Chuyên quản 3", assignedUnits: ["42000", "52000", "61000", "55000", "46000", "54000", "47000", "59000", "43000", "57000"] },
-      { id: "CQ4", name: "Chuyên quản 4", assignedUnits: ["70000", "96000", "94000", "71000", "92000", "91000", "73000", "93000", "85000", "84000", "74000", "72000", "78000", "79000", "86000", "87000", "76000", "80000"] }
+      { id: "CQ1", name: "CQ TCT 1", assignedUnits: ["39000", "22000", "41000", "36000", "20000", "24000", "14000", "16000", "35000", "23000", "19000", "40000", "25000"] },
+      { id: "CQ2", name: "CQ TCT 2", assignedUnits: ["10000", "75000", "50000", "66000", "48000", "98000", "44000", "67000", "65000", "27000", "28000"] },
+      { id: "CQ3", name: "CQ TCT 3", assignedUnits: ["42000", "52000", "61000", "55000", "46000", "54000", "47000", "59000", "43000", "57000"] },
+      { id: "CQ4", name: "CQ TCT 4", assignedUnits: ["70000", "96000", "94000", "71000", "92000", "91000", "73000", "93000", "85000", "84000", "74000", "72000", "78000", "79000", "86000", "87000", "76000", "80000"] }
     ];
 
-    const STORAGE_KEY_AUTH = "VNPOST_AUTH_ACCOUNTS_V7";
-    const STORAGE_KEY_LOGIN_HISTORY = "VNPOST_LOGIN_HISTORY_V1";
-    const STORAGE_KEY_OFFICER_AUTH = "VNPOST_OFFICER_ACCOUNTS_V7";
-    const STORAGE_KEY_DATA = "VNPOST_ACTIVE_DATASET_V6";
-    const STORAGE_KEY_SETTLED = "VNPOST_SETTLED_LIST_V6";
-    const STORAGE_KEY_META = "VNPOST_METADATA_V6";
-    const STORAGE_KEY_OFFICERS = "VNPOST_OFFICERS_V6";
+    const STORAGE_KEY_AUTH = "VNPOST_AUTH_ACCOUNTS_V8";
+    const STORAGE_KEY_LOGIN_HISTORY = "VNPOST_LOGIN_HISTORY_V8";
+    const STORAGE_KEY_OFFICER_AUTH = "VNPOST_OFFICER_ACCOUNTS_V8";
+    const STORAGE_KEY_DATA = "VNPOST_ACTIVE_DATASET_V8";
+    const STORAGE_KEY_SETTLED = "VNPOST_SETTLED_LIST_V8";
+    const STORAGE_KEY_META = "VNPOST_METADATA_V8";
+    const STORAGE_KEY_OFFICERS = "VNPOST_OFFICERS_V8";
     const STORAGE_KEY_FB_URL = "VNPOST_FIREBASE_URL";
 
     function generate6DigitCode() {
@@ -1093,7 +1110,22 @@
       return `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')} ${now.getDate()}/${now.getMonth() + 1}`;
     }
 
-        // ==================== YÊU CẦU 4: BẢN TIN NHẮC NỢ LỊCH SỰ, ĐỒNG HÀNH (BƯU ĐIỆN HỖ TRỢ THANH TOÁN ĐẾN HẠN) ====================
+    // B. NHẬN DIỆN SẢN PHẨM VAY THEO KÝ HIỆU HỢP ĐỒNG
+    function identifyProduct(contractId) {
+      if (!contractId) return { code: "OTHER", name: "Sản phẩm khác", badgeClass: "bg-slate-100 text-slate-700" };
+      const cid = String(contractId).trim().toUpperCase();
+      // B. Ký hiệu CAKECLVPOP: Vay An Vui Bưu điện
+      if (cid.startsWith("CAKECLVPOP")) {
+        return { code: "AN_VUI", name: "Vay An Vui Bưu điện", badgeClass: "bg-indigo-100 text-indigo-800 border border-indigo-200" };
+      }
+      // B. Ký hiệu CAKECLVPO: Vay nhanh
+      if (cid.startsWith("CAKECLVPO")) {
+        return { code: "VAY_NHANH", name: "Vay nhanh", badgeClass: "bg-amber-100 text-amber-900 border border-amber-200" };
+      }
+      return { code: "OTHER", name: "Sản phẩm khác", badgeClass: "bg-slate-100 text-slate-700 border border-slate-200" };
+    }
+
+    // BẢN TIN NHẮC NỢ
     function buildReminderMessage(customerName, customerPhone, contractId, overdueDays, outstandingDue, staffName, staffCode, province, reminderCount = 1) {
       const contactInfo = (staffName && staffCode) ? `Đ/c ${staffName} - NVKD (SĐT: ${staffCode})` : (staffCode ? `NVKD phụ trách (SĐT: ${staffCode})` : `Bưu điện ${province}`);
       const phoneDisplay = customerPhone ? ` (SĐT: ${customerPhone})` : '';
@@ -1110,7 +1142,7 @@
       let changed = false;
 
       if (!accounts["admin"]) {
-        accounts["admin"] = { role: "ADMIN", unitName: "Tổng Công Ty Bưu Điện Việt Nam", password: "admintct" };
+        accounts["admin"] = { role: "ADMIN", unitName: "Tổng Công Ty Bưu Điện Việt Nam (TCT)", password: "admintct" };
         changed = true;
       }
 
@@ -1147,16 +1179,12 @@
 
     function saveAccountsSync(accounts) {
       localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(accounts));
-      if (isFirebaseActive && firebaseDb) {
-        firebaseDb.ref('vnpost_accounts').set(accounts);
-      }
+      if (isFirebaseActive && firebaseDb) firebaseDb.ref('vnpost_accounts').set(accounts);
     }
 
     function saveOfficerAccountsSync(offAccounts) {
       localStorage.setItem(STORAGE_KEY_OFFICER_AUTH, JSON.stringify(offAccounts));
-      if (isFirebaseActive && firebaseDb) {
-        firebaseDb.ref('vnpost_officer_accounts').set(offAccounts);
-      }
+      if (isFirebaseActive && firebaseDb) firebaseDb.ref('vnpost_officer_accounts').set(offAccounts);
     }
 
     function initOfficers() {
@@ -1172,8 +1200,7 @@
     function getActiveFirebaseUrl() {
       const stored = localStorage.getItem(STORAGE_KEY_FB_URL);
       if (stored && stored.trim()) return stored.trim();
-      if (EMBEDDED_FIREBASE_URL && EMBEDDED_FIREBASE_URL.trim()) return EMBEDDED_FIREBASE_URL.trim();
-      return "";
+      return EMBEDDED_FIREBASE_URL || "";
     }
 
     function initFirebase() {
@@ -1195,7 +1222,7 @@
         }
       }
       isFirebaseActive = false;
-      indicator.innerText = "Bộ phận (LocalStorage)";
+      indicator.innerText = "Nội bộ (LocalStorage)";
       indicator.className = "text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700";
       loadLocalData();
     }
@@ -1203,37 +1230,6 @@
     function listenToFirebaseSync() {
       if (!firebaseDb) return;
       document.getElementById('syncStatusIndicator').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Đồng bộ trực tuyến tức thì';
-
-      firebaseDb.ref('vnpost_accounts').on('value', snapshot => {
-        const accs = snapshot.val();
-        if (accs) localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(accs));
-      });
-
-      firebaseDb.ref('vnpost_officer_accounts').on('value', snapshot => {
-        const offAccs = snapshot.val();
-        if (offAccs) localStorage.setItem(STORAGE_KEY_OFFICER_AUTH, JSON.stringify(offAccs));
-      });
-
-      firebaseDb.ref('vnpost_officers').on('value', snapshot => {
-        const off = snapshot.val();
-        if (off) {
-          officerList = off;
-          localStorage.setItem(STORAGE_KEY_OFFICERS, JSON.stringify(off));
-          initOfficerDropdown();
-        }
-      });
-
-      firebaseDb.ref('vnpost_login_history').on('value', snapshot => {
-        const val = snapshot.val();
-        if (val) {
-          loginHistoryMap = val;
-          localStorage.setItem(STORAGE_KEY_LOGIN_HISTORY, JSON.stringify(val));
-          updateLoginHeaderBadge();
-          if (!document.getElementById('loginHistoryModal').classList.contains('hidden')) {
-            renderLoginHistoryTable();
-          }
-        }
-      });
 
       firebaseDb.ref('vnpost_loans_data').on('value', snapshot => {
         const val = snapshot.val();
@@ -1246,10 +1242,6 @@
       firebaseDb.ref('vnpost_metadata').on('value', snapshot => {
         const meta = snapshot.val();
         if (meta) updateFileNotice(meta);
-        else {
-          document.getElementById('currentFileNameText').innerText = "Chưa có dữ liệu nào được import";
-          document.getElementById('currentFileDateText').innerText = "Vui lòng liên hệ Admin TCT để nạp dữ liệu.";
-        }
       });
     }
 
@@ -1319,12 +1311,11 @@
 
     function completeLoginSuccess() {
       document.getElementById('loginScreen').classList.add('hidden');
-      logUserLoginEvent(currentUser); // Ghi nhận lưu vết lịch sử đăng nhập
+      logUserLoginEvent(currentUser);
       setupUserSessionView();
       showToast(`Xin chào ${currentUser.unitName}!`);
     }
 
-    // YÊU CẦU 3: THIẾT LẬP GIAO DIỆN PHÂN QUYỀN TINH GỌN (CHỈ 1 NÚT QUẢN TRỊ TRUNG TÂM)
     function setupUserSessionView() {
       const headerTitle = document.getElementById('headerSubTitle');
       const adminToolbar = document.getElementById('adminToolbar');
@@ -1333,12 +1324,12 @@
       const rankSortButtons = document.getElementById('rankSortButtons');
       const reportRankingSubtitle = document.getElementById('reportRankingSubtitle');
       const colLoanRangeFilter = document.getElementById('colLoanRangeFilter');
-      const bulkGroupTCT = document.getElementById('bulkGroupTCT');
-      const bulkGroupUnit = document.getElementById('bulkGroupUnit');
+      const bulkGroupCQTCT = document.getElementById('bulkGroupCQTCT');
+      const bulkGroupCQBDT = document.getElementById('bulkGroupCQBDT');
       const btnLoginHistory = document.getElementById('btnLoginHistory');
 
       if (currentUser.role === 'ADMIN') {
-        headerTitle.innerHTML = `<b class="text-amber-400">TỔNG CÔNG TY (Layer 1)</b> | Toàn quyền điều hành toàn mạng lưới`;
+        headerTitle.innerHTML = `<b class="text-amber-400">TỔNG CÔNG TY (TCT - Admin)</b> | Đã tự động chuyển trạng thái đôn đốc tới CQ TCT`;
         adminToolbar.classList.remove('hidden');
         btnUnifiedAdmin.classList.remove('hidden');
         btnUnifiedAdmin.classList.add('flex');
@@ -1349,12 +1340,12 @@
         reportRankingSubtitle.innerText = "Thống kê so sánh toàn bộ các đơn vị trên toàn mạng lưới";
         colLoanRangeFilter.classList.remove('hidden');
 
-        bulkGroupTCT.classList.remove('hidden');
-        bulkGroupTCT.classList.add('flex');
-        bulkGroupUnit.classList.add('hidden');
-        bulkGroupUnit.classList.remove('flex');
+        bulkGroupCQTCT.classList.remove('hidden');
+        bulkGroupCQTCT.classList.add('flex');
+        bulkGroupCQBDT.classList.remove('hidden');
+        bulkGroupCQBDT.classList.add('flex');
       } else if (currentUser.role === 'OFFICER') {
-        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName} (Layer 2 - Chuyên quản)</b> | Phụ trách ${currentUser.assignedUnits.length} đơn vị`;
+        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName} (CQ TCT)</b> | Điều hành gửi CQ BĐT (${currentUser.assignedUnits.length} đơn vị)`;
         adminToolbar.classList.add('hidden');
         btnUnifiedAdmin.classList.add('hidden');
         btnUnifiedAdmin.classList.remove('flex');
@@ -1362,20 +1353,18 @@
         btnLoginHistory.classList.add('flex');
         officerFilter.disabled = true;
         rankSortButtons.classList.remove('hidden');
-        reportRankingSubtitle.innerText = `Thống kê trong phạm vi địa bàn chuyên quản phụ trách`;
+        reportRankingSubtitle.innerText = `Thống kê trong phạm vi CQ TCT phụ trách`;
         colLoanRangeFilter.classList.remove('hidden');
 
-        bulkGroupTCT.classList.add('hidden');
-        bulkGroupTCT.classList.remove('flex');
-        bulkGroupUnit.classList.remove('hidden');
-        bulkGroupUnit.classList.add('flex');
+        bulkGroupCQTCT.classList.remove('hidden');
+        bulkGroupCQTCT.classList.add('flex');
+        bulkGroupCQBDT.classList.add('hidden');
+        bulkGroupCQBDT.classList.remove('flex');
       } else {
-        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName} (Layer 3 - Đơn vị)</b> | Phân quyền tác nghiệp tỉnh`;
+        headerTitle.innerHTML = `<b class="text-amber-400">${currentUser.unitName} (CQ BĐT)</b> | Điều hành gửi NVKD và nhận phản hồi KH`;
         adminToolbar.classList.add('hidden');
         btnUnifiedAdmin.classList.add('hidden');
         btnUnifiedAdmin.classList.remove('flex');
-        btnLoginHistory.classList.remove('hidden');
-        btnLoginHistory.classList.add('flex');
         officerFilter.disabled = true;
         rankSortButtons.classList.add('hidden');
         reportRankingSubtitle.innerText = `Báo cáo số liệu nội bộ đơn vị ${currentUser.unitName}`;
@@ -1383,15 +1372,15 @@
         btnLoginHistory.classList.remove('flex');
         colLoanRangeFilter.classList.add('hidden');
 
-        bulkGroupTCT.classList.add('hidden');
-        bulkGroupTCT.classList.remove('flex');
-        bulkGroupUnit.classList.remove('hidden');
-        bulkGroupUnit.classList.add('flex');
+        bulkGroupCQTCT.classList.add('hidden');
+        bulkGroupCQTCT.classList.remove('flex');
+        bulkGroupCQBDT.classList.remove('hidden');
+        bulkGroupCQBDT.classList.add('flex');
       }
 
       initOfficerDropdown();
       initProvinceDropdown();
-      applyFilters();
+      applyFilters(true);
     }
 
     function handleLogout() {
@@ -1408,11 +1397,11 @@
 
     function initOfficerDropdown() {
       const select = document.getElementById('officerFilter');
-      select.innerHTML = '<option value="ALL">-- Tất cả chuyên quản --</option>';
+      select.innerHTML = '<option value="ALL">-- Tất cả CQ TCT --</option>';
       officerList.forEach(off => {
         const opt = document.createElement('option');
         opt.value = off.id;
-        opt.textContent = `${off.name} (${off.assignedUnits.length} đơn vị)`;
+        opt.textContent = `${off.name} (${off.assignedUnits.length} BĐT)`;
         select.appendChild(opt);
       });
       if (currentUser && currentUser.role === 'OFFICER') {
@@ -1422,7 +1411,7 @@
 
     function onOfficerChanged() {
       initProvinceDropdown();
-      applyFilters();
+      applyFilters(true);
     }
 
     function initProvinceDropdown() {
@@ -1470,8 +1459,44 @@
       }
     }
 
+    // A. SẮP XẾP MŨI TÊN LÊN (A-Z: BÉ ĐẾN LỚN) VÀ XUỐNG (Z-A: LỚN ĐẾN BÉ)
+    function setSorting(column, direction) {
+      if (sortColumn === column && sortDirection === direction) {
+        // Click lại lần nữa để hủy sắp xếp
+        sortColumn = null;
+        sortDirection = 'NONE';
+      } else {
+        sortColumn = column;
+        sortDirection = direction;
+      }
+      updateSortIconUI();
+      applyFilters(false);
+    }
+
+    function updateSortIconUI() {
+      const elDueAsc = document.getElementById('sortDueAsc');
+      const elDueDesc = document.getElementById('sortDueDesc');
+      const elDaysAsc = document.getElementById('sortDaysAsc');
+      const elDaysDesc = document.getElementById('sortDaysDesc');
+
+      [elDueAsc, elDueDesc, elDaysAsc, elDaysDesc].forEach(el => {
+        if (el) el.className = "hover:text-indigo-600 px-0.5 text-slate-400";
+      });
+
+      if (sortColumn === 'outstandingDue') {
+        if (sortDirection === 'ASC' && elDueAsc) elDueAsc.className = "text-indigo-600 font-bold px-0.5";
+        if (sortDirection === 'DESC' && elDueDesc) elDueDesc.className = "text-indigo-600 font-bold px-0.5";
+      } else if (sortColumn === 'overdueDays') {
+        if (sortDirection === 'ASC' && elDaysAsc) elDaysAsc.className = "text-indigo-600 font-bold px-0.5";
+        if (sortDirection === 'DESC' && elDaysDesc) elDaysDesc.className = "text-indigo-600 font-bold px-0.5";
+      }
+    }
+
     // BỘ LỌC DỮ LIỆU
-    function applyFilters() {
+    function applyFilters(resetPage = false) {
+      if (resetPage) currentPage = 1;
+
+      const productF = document.getElementById('productFilter') ? document.getElementById('productFilter').value : 'ALL';
       const freqF = document.getElementById('frequencyFilter') ? document.getElementById('frequencyFilter').value : 'ALL';
       const officerF = document.getElementById('officerFilter').value;
       const provF = document.getElementById('provinceFilter').value;
@@ -1499,6 +1524,12 @@
         if (activeOfficerUnitCodes && !activeOfficerUnitCodes.has(d.unitCode)) return false;
         if (provF !== 'ALL' && !d.province.includes(provF) && !provF.includes(d.province)) return false;
 
+        // B. Lọc theo Sản phẩm vay
+        if (productF !== 'ALL') {
+          const prod = identifyProduct(d.contractId);
+          if (prod.code !== productF) return false;
+        }
+
         if (currentUser.role !== 'UNIT') {
           const provCount = provinceLoanCounts[d.province] || 0;
           if (rangeF === '1-10' && (provCount < 1 || provCount > 10)) return false;
@@ -1508,21 +1539,21 @@
           if (rangeF === 'GT50' && provCount <= 50) return false;
         }
 
-        // Lọc theo số lần nhắc nợ
         const rCount = parseInt(d.reminderCount) || 1;
         if (freqF === '1' && rCount !== 1) return false;
         if (freqF === '2' && rCount !== 2) return false;
         if (freqF === '3' && rCount !== 3) return false;
         if (freqF === '4+' && rCount < 4) return false;
 
-        if (statusF === 'TCT_CHUA' && d.status.tctStatus !== 'CHUA_GUI') return false;
-        if (statusF === 'TCT_DA' && d.status.tctStatus !== 'DA_GUI') return false;
-        if (statusF === 'CQT_CHUA' && d.status.cqtStatus !== 'CHUA_GUI') return false;
-        if (statusF === 'CQT_DA' && d.status.cqtStatus !== 'DA_GUI') return false;
-        if (statusF === 'NVKD_CHUA' && d.status.nvkdStatus !== 'CHUA_NHAN') return false;
-        if (statusF === 'NVKD_DA' && d.status.nvkdStatus !== 'DA_NHAN') return false;
+        // E. Lọc trạng thái gửi mới
+        if (statusF === 'CQ_TCT_CHUA' && d.status.cqTctStatus !== 'CHUA_GUI') return false;
+        if (statusF === 'CQ_TCT_DA' && d.status.cqTctStatus !== 'DA_GUI') return false;
+        if (statusF === 'CQ_BDT_CHUA' && d.status.cqBdtStatus !== 'CHUA_GUI') return false;
+        if (statusF === 'CQ_BDT_DA' && d.status.cqBdtStatus !== 'DA_GUI') return false;
 
-        if (feedbackF !== 'ALL' && d.status.feedback !== feedbackF) return false;
+        // D. Lọc phản hồi (lấy phản hồi mới nhất trong 3 lần)
+        const latestFeedback = d.status.feedback3 || d.status.feedback2 || d.status.feedback || 'CHUA_LIEN_HE';
+        if (feedbackF !== 'ALL' && latestFeedback !== feedbackF) return false;
 
         if (search) {
           const match = 
@@ -1532,6 +1563,8 @@
             d.staffCode.includes(search) ||
             d.staffName.toLowerCase().includes(search) ||
             (d.status.note && d.status.note.toLowerCase().includes(search)) ||
+            (d.status.note2 && d.status.note2.toLowerCase().includes(search)) ||
+            (d.status.note3 && d.status.note3.toLowerCase().includes(search)) ||
             d.province.toLowerCase().includes(search);
           if (!match) return false;
         }
@@ -1539,8 +1572,17 @@
         return true;
       });
 
+      // A. ÁP DỤNG SẮP XẾP A-Z, Z-A NẾU CÓ CHỌN
+      if (sortColumn && sortDirection !== 'NONE') {
+        currentFilteredData.sort((a, b) => {
+          let valA = a[sortColumn] || 0;
+          let valB = b[sortColumn] || 0;
+          return sortDirection === 'ASC' ? (valA - valB) : (valB - valA);
+        });
+      }
+
       updateKPIs(currentFilteredData);
-      renderTable(currentFilteredData);
+      renderTablePaginated();
       updateSelectionSummary();
     }
 
@@ -1555,20 +1597,60 @@
       const totalOutstanding = data.reduce((s, d) => s + (d.totalDebt || 0), 0);
       const avgDays = totalLoans > 0 ? Math.round(data.reduce((s, d) => s + (d.overdueDays || 0), 0) / totalLoans) : 0;
 
-      const tctDoneCount = data.filter(d => d.status.tctStatus === 'DA_GUI').length;
-      const tctPercent = totalLoans > 0 ? Math.round((tctDoneCount / totalLoans) * 100) : 0;
-      const riskFeedbackCount = data.filter(d => d.status.feedback === 'TIEU_CUC' || d.status.feedback === 'DOI_SO').length;
+      // E. Rule 1: TCT đã chuyển tới CQ TCT
+      const tctTransferredCount = data.filter(d => d.status.tctStatus === 'DA_CHUYEN').length;
+      const tctTransferredPct = totalLoans > 0 ? Math.round((tctTransferredCount / totalLoans) * 100) : 0;
+      
+      const riskFeedbackCount = data.filter(d => {
+        const fb = d.status.feedback3 || d.status.feedback2 || d.status.feedback;
+        return fb === 'TIEU_CUC' || fb === 'DOI_SO';
+      }).length;
 
       document.getElementById('kpiTotalLoans').innerText = totalLoans.toLocaleString('vi-VN');
       document.getElementById('kpiTotalDue').innerText = formatVND(totalDue);
       document.getElementById('kpiTotalOutstanding').innerText = formatVND(totalOutstanding);
       document.getElementById('kpiAvgDays').innerText = `${avgDays} ngày`;
-      document.getElementById('kpiDoneProgress').innerText = `CQTCT gửi CQT: ${tctDoneCount}/${totalLoans} (${tctPercent}%)`;
+      document.getElementById('kpiDoneProgress').innerText = `TCT đã chuyển CQ TCT: ${tctTransferredCount}/${totalLoans} (${tctTransferredPct}%)`;
       document.getElementById('kpiFeedbackRisk').innerText = `Rủi ro cao: ${riskFeedbackCount} khoản`;
 
       document.getElementById('filteredCount').innerText = totalLoans.toLocaleString('vi-VN');
       document.getElementById('totalCount').innerText = rawDataset.length.toLocaleString('vi-VN');
       document.getElementById('settledCountBadge').innerText = settledLoansList.length;
+    }
+
+    // C. XỬ LÝ PHÂN TRANG (500 HỢP ĐỒNG / TRANG)
+    function changePage(action) {
+      const totalPages = Math.ceil(currentFilteredData.length / PAGE_SIZE) || 1;
+      if (action === 'first') currentPage = 1;
+      else if (action === 'prev') currentPage = Math.max(1, currentPage - 1);
+      else if (action === 'next') currentPage = Math.min(totalPages, currentPage + 1);
+      else if (action === 'last') currentPage = totalPages;
+
+      renderTablePaginated();
+    }
+
+    function renderTablePaginated() {
+      const totalItems = currentFilteredData.length;
+      const totalPages = Math.ceil(totalItems / PAGE_SIZE) || 1;
+
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const startIndex = (currentPage - 1) * PAGE_SIZE;
+      const endIndex = Math.min(startIndex + PAGE_SIZE, totalItems);
+      const pageData = currentFilteredData.slice(startIndex, endIndex);
+
+      document.getElementById('currentPageNum').innerText = currentPage;
+      document.getElementById('totalPagesNum').innerText = totalPages;
+      document.getElementById('pageTotalItems').innerText = totalItems.toLocaleString('vi-VN');
+      document.getElementById('pageDisplayRange').innerText = totalItems === 0 ? "0 - 0" : `${(startIndex + 1).toLocaleString('vi-VN')} - ${endIndex.toLocaleString('vi-VN')}`;
+
+      document.getElementById('btnFirstPage').disabled = (currentPage === 1);
+      document.getElementById('btnPrevPage').disabled = (currentPage === 1);
+      document.getElementById('btnNextPage').disabled = (currentPage >= totalPages);
+      document.getElementById('btnLastPage').disabled = (currentPage >= totalPages);
+
+      renderTable(pageData, startIndex);
     }
 
     // TICK CHỌN NHIỀU KHOẢN
@@ -1583,13 +1665,13 @@
         if (checked) selectedContractIds.add(d.contractId);
         else selectedContractIds.delete(d.contractId);
       });
-      renderTable(currentFilteredData);
+      renderTablePaginated();
       updateSelectionSummary();
     }
 
     function clearAllSelectedLoans() {
       selectedContractIds.clear();
-      renderTable(currentFilteredData);
+      renderTablePaginated();
       updateSelectionSummary();
       showToast("Đã bỏ chọn tất cả các khoản vay!");
     }
@@ -1606,19 +1688,19 @@
       }
     }
 
-    // ĐỔI TRẠNG THÁI HÀNG LOẠT
+    // E. ĐỔI TRẠNG THÁI HÀNG LOẠT THEO RULE MỚI
     function applyBulkStatusUpdate(field, value) {
       if (selectedContractIds.size === 0) {
         alert("Vui lòng tick chọn ít nhất 1 khoản vay ở cột đầu tiên trước khi thực hiện!");
         return;
       }
 
-      if (field === 'tctStatus' && currentUser.role !== 'ADMIN') {
-        alert("Chỉ tài khoản Tổng Công Ty mới có quyền cập nhật trạng thái CQTCT gửi CQT!");
+      if (field === 'cqTctStatus' && currentUser.role === 'UNIT') {
+        alert("Chỉ tài khoản TCT hoặc CQ TCT mới có quyền cập nhật trạng thái CQ TCT gửi CQ BĐT!");
         return;
       }
-      if ((field === 'cqtStatus' || field === 'nvkdStatus') && currentUser.role === 'ADMIN') {
-        alert("Tổng Công Ty chỉ cập nhật trạng thái TCT gửi tới CQT. Không can thiệp đổi trạng thái CQT và NVKD thay cho cơ sở!");
+      if (field === 'cqBdtStatus' && currentUser.role === 'OFFICER') {
+        alert("Chuyên quản Tổng công ty (CQ TCT) không cập nhật trạng thái thay cho CQ BĐT!");
         return;
       }
 
@@ -1628,40 +1710,17 @@
 
       rawDataset.forEach(item => {
         if (selectedContractIds.has(item.contractId)) {
-          if (field === 'tctStatus') {
-            if (value === 'DA_GUI') {
-              item.status.tctStatus = 'DA_GUI';
-              if (!item.status.tctTime) item.status.tctTime = timeStr;
-            } else {
-              item.status.tctStatus = 'CHUA_GUI';
-              item.status.tctTime = '';
-              item.status.cqtStatus = 'CHUA_GUI';
-              item.status.cqtTime = '';
-              item.status.nvkdStatus = 'CHUA_NHAN';
-              item.status.nvkdTime = '';
+          if (field === 'cqTctStatus') {
+            item.status.cqTctStatus = value;
+            item.status.cqTctTime = (value === 'DA_GUI') ? timeStr : '';
+            if (value === 'CHUA_GUI') {
+              item.status.cqBdtStatus = 'CHUA_GUI';
+              item.status.cqBdtTime = '';
             }
-          } 
-          else if (field === 'cqtStatus') {
-            if (value === 'DA_GUI') {
-              if (item.status.tctStatus !== 'DA_GUI') return;
-              item.status.cqtStatus = 'DA_GUI';
-              if (!item.status.cqtTime) item.status.cqtTime = timeStr;
-            } else {
-              item.status.cqtStatus = 'CHUA_GUI';
-              item.status.cqtTime = '';
-              item.status.nvkdStatus = 'CHUA_NHAN';
-              item.status.nvkdTime = '';
-            }
-          } 
-          else if (field === 'nvkdStatus') {
-            if (value === 'DA_NHAN') {
-              if (item.status.cqtStatus !== 'DA_GUI') return;
-              item.status.nvkdStatus = 'DA_NHAN';
-              if (!item.status.nvkdTime) item.status.nvkdTime = timeStr;
-            } else {
-              item.status.nvkdStatus = 'CHUA_NHAN';
-              item.status.nvkdTime = '';
-            }
+          } else if (field === 'cqBdtStatus') {
+            if (value === 'DA_GUI' && item.status.cqTctStatus !== 'DA_GUI') return;
+            item.status.cqBdtStatus = value;
+            item.status.cqBdtTime = (value === 'DA_GUI') ? timeStr : '';
           }
 
           item.status.lastUpdated = `${timeStr} (${currentUser.unitName})`;
@@ -1679,45 +1738,46 @@
       }
 
       updateKPIs(currentFilteredData);
-      renderTable(currentFilteredData);
+      renderTablePaginated();
 
-      const actionDesc = (value === 'DA_GUI' || value === 'DA_NHAN') ? 'chuyển sang ĐÃ XỬ LÝ' : 'đảo về CHƯA XỬ LÝ';
-      showToast(`Đã ${actionDesc} thành công cho ${updatedCount} khoản nợ!`);
+      const actionDesc = (value === 'DA_GUI') ? 'ĐÃ GỬI (Màu xanh)' : 'CHƯA GỬI (Màu đỏ)';
+      showToast(`Đã cập nhật trạng thái ${actionDesc} cho ${updatedCount} khoản nợ!`);
     }
 
-    // LƯU GHI CHÚ
-    function saveSingleLoanNote(contractId) {
-      const inputEl = document.getElementById(`noteInput_${contractId}`);
-      if (!inputEl) return;
-      const noteVal = inputEl.value.trim();
-
+    // D. LƯU GHI CHÚ VÀ PHẢN HỒI (HỖ TRỢ 3 LẦN)
+    function saveSingleLoanNote(contractId, round = 1) {
       const item = rawDataset.find(d => d.contractId === contractId);
-      if (item) {
-        item.status.note = noteVal;
-        const timeStr = getNowFormatted();
-        item.status.lastUpdated = `${timeStr} (${currentUser.unitName})`;
+      if (!item) return;
 
-        saveLocalCache();
-        if (isFirebaseActive && firebaseDb) {
-          firebaseDb.ref(`vnpost_loans_data/${contractId}`).set(item);
-        }
-
-        const btnSave = document.getElementById(`btnSaveNote_${contractId}`);
-        if (btnSave) {
-          btnSave.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> Đã lưu';
-          btnSave.className = "px-2 py-0.5 bg-emerald-700 text-white rounded text-[9px] font-bold transition flex items-center gap-1 shadow-sm";
-          setTimeout(() => {
-            btnSave.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu';
-            btnSave.className = "px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[9px] font-semibold transition flex items-center gap-1 shadow-sm";
-          }, 2500);
-        }
-
-        showToast(`Đã lưu ghi chú hợp đồng ${contractId}!`);
+      const noteField = round === 1 ? 'note' : (round === 2 ? 'note2' : 'note3');
+      const inputEl = document.getElementById(`${noteField}Input_${contractId}`);
+      if (inputEl) {
+        item.status[noteField] = inputEl.value.trim();
       }
+
+      const timeStr = getNowFormatted();
+      item.status.lastUpdated = `${timeStr} (${currentUser.unitName})`;
+
+      saveLocalCache();
+      if (isFirebaseActive && firebaseDb) {
+        firebaseDb.ref(`vnpost_loans_data/${contractId}`).set(item);
+      }
+
+      const btnSave = document.getElementById(`btnSave_${round}_${contractId}`);
+      if (btnSave) {
+        btnSave.innerHTML = '<i class="fa-solid fa-check text-emerald-300"></i>';
+        btnSave.className = "px-1.5 py-0.5 bg-emerald-700 text-white rounded text-[9px] font-bold";
+        setTimeout(() => {
+          btnSave.innerHTML = '<i class="fa-solid fa-floppy-disk"></i>';
+          btnSave.className = "px-1.5 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[9px] font-semibold";
+        }, 2000);
+      }
+
+      showToast(`Đã lưu phản hồi & ghi chú Lần ${round} cho HĐ ${contractId}!`);
     }
 
     // RENDER BẢNG DỮ LIỆU CHÍNH
-    function renderTable(data) {
+    function renderTable(data, startIndex = 0) {
       const tbody = document.getElementById('tableBody');
       tbody.innerHTML = '';
 
@@ -1726,9 +1786,7 @@
         return;
       }
 
-      const limit = Math.min(data.length, 200);
-      for (let i = 0; i < limit; i++) {
-        const item = data[i];
+      data.forEach((item, index) => {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
 
@@ -1736,16 +1794,27 @@
         const officerName = officerAssigned ? officerAssigned.name : "Chưa gán";
 
         const st = item.status;
-        const isTCTSent = (st.tctStatus === 'DA_GUI');
-        const isCQTSent = (isTCTSent && st.cqtStatus === 'DA_GUI');
         const isChecked = selectedContractIds.has(item.contractId);
 
-        const canEditTCT = (currentUser.role === 'ADMIN');
-        const canEditCQT = (currentUser.role === 'ADMIN') || isTCTSent;
-        const canEditNVKD = (currentUser.role === 'ADMIN') || isCQTSent;
+        // B. Nhận diện Sản Phẩm
+        const productInfo = identifyProduct(item.contractId);
 
-        // Cập nhật lại bản tin nhắc nợ đảm bảo đầy đủ SĐT KH và theo đúng kịch bản cảnh báo số ngày nợ
-        const currentReminder = buildReminderMessage(item.customerName, item.customerPhone, item.contractId, item.overdueDays, item.outstandingDue, item.staffName, item.staffCode, item.province);
+        // E. Quyền thao tác theo Rule:
+        // Rule 1: TCT tự chuyển
+        // Rule 2: CQ TCT điều khiển trạng thái gửi tới CQ BĐT
+        // Rule 3: CQ BĐT điều khiển trạng thái gửi tới NVKD
+        // Rule 4: CQ BĐT cập nhật phản hồi KH từ NVKD
+        const canEditCqTct = (currentUser.role === 'ADMIN' || currentUser.role === 'OFFICER');
+        const isCqTctSent = (st.cqTctStatus === 'DA_GUI');
+        const canEditCqBdt = (currentUser.role === 'ADMIN') || (currentUser.role === 'UNIT' && isCqTctSent);
+        const isCqBdtSent = (st.cqBdtStatus === 'DA_GUI');
+        const canEditFeedback = (currentUser.role === 'ADMIN' || currentUser.role === 'UNIT');
+
+        // D. Kiểm tra trạng thái phản hồi để mở Lần 2 và Lần 3
+        const hasFeedback1 = (st.feedback && st.feedback !== 'CHUA_LIEN_HE') || Boolean(st.note && st.note.trim());
+        const hasFeedback2 = (st.feedback2 && st.feedback2 !== 'CHUA_LIEN_HE') || Boolean(st.note2 && st.note2.trim());
+
+        const currentReminder = buildReminderMessage(item.customerName, item.customerPhone, item.contractId, item.overdueDays, item.outstandingDue, item.staffName, item.staffCode, item.province, item.reminderCount);
         item.reminderMsg = currentReminder;
 
         tr.innerHTML = `
@@ -1755,9 +1824,9 @@
           </td>
 
           <!-- 2. STT -->
-          <td class="p-1.5 text-center text-slate-400 font-medium">${i + 1}</td>
+          <td class="p-1.5 text-center text-slate-400 font-medium">${startIndex + index + 1}</td>
 
-          <!-- 3. Đơn vị & Chuyên quản -->
+          <!-- 3. CQ TCT & CQ BĐT -->
           <td class="p-1.5 truncate">
             <span class="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-100 text-indigo-800 mb-0.5 truncate max-w-full">
               ${officerName}
@@ -1766,22 +1835,26 @@
             <div class="text-[10px] text-slate-500 truncate" title="${item.postOffice || ''}">${item.postOffice || ''}</div>
           </td>
 
-          <!-- 4. Khách hàng & HĐ (kèm Huy hiệu Số lần nhắc nợ) -->
+          <!-- 4. Khách hàng, HĐ & Sản phẩm Vay -->
           <td class="p-1.5">
-            <div class="flex items-center gap-1">
+            <div class="flex items-center gap-1 flex-wrap">
               <span class="font-bold text-slate-800 truncate" title="${item.customerName}">${item.customerName}</span>
-              <span class="px-1 py-0.2 rounded text-[8px] font-extrabold ${item.reminderCount > 3 ? 'bg-rose-100 text-rose-800 border border-rose-300' : (item.reminderCount === 3 ? 'bg-amber-100 text-amber-800' : (item.reminderCount === 2 ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'))}">
+              <!-- B. Huy hiệu Sản phẩm vay -->
+              <span class="px-1 py-0.2 rounded text-[8px] font-bold ${productInfo.badgeClass}">
+                ${productInfo.name}
+              </span>
+              <span class="px-1 py-0.2 rounded text-[8px] font-extrabold ${item.reminderCount > 3 ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-600'}">
                 Lần ${item.reminderCount || 1}
               </span>
             </div>
             <div class="text-[10px] text-slate-500 truncate"><i class="fa-solid fa-phone text-[9px] mr-0.5"></i>${item.customerPhone || 'Không SĐT'}</div>
-            <div class="text-[10px] font-mono text-indigo-700 truncate" title="${item.contractId}">${item.contractId}</div>
+            <div class="text-[10px] font-mono text-indigo-700 truncate font-semibold" title="${item.contractId}">${item.contractId}</div>
           </td>
 
           <!-- 5. Tiền cần thu & Dư nợ -->
           <td class="p-1.5 text-right">
             <div class="font-bold text-rose-600 text-[11px]">${formatVND(item.outstandingDue)}</div>
-            <div class="text-[9px] text-slate-400 truncate">Dư: ${formatVND(item.totalDebt)}</div>
+            <div class="text-[9px] text-slate-400 truncate">Dư nợ: ${formatVND(item.totalDebt)}</div>
           </td>
 
           <!-- 6. Quá hạn -->
@@ -1801,118 +1874,171 @@
             </div>
           </td>
 
-          <!-- 8. Bản tin nhắc nợ (Đủ Tên & SĐT của cả KH và NVKD) -->
+          <!-- 8. Bản tin nhắc nợ -->
           <td class="p-1.5">
             <div class="relative group bg-slate-50 p-1.5 rounded border border-slate-200">
               <div class="text-[10px] text-slate-600 line-clamp-2 leading-relaxed" title="${currentReminder}">
                 ${currentReminder}
               </div>
               <div class="mt-1 flex items-center justify-between gap-1">
-                <button id="btnCopy_${item.contractId}" onclick="copySingleReminder('${item.contractId}')" class="text-[9px] bg-white hover:bg-indigo-50 active:scale-95 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded font-semibold flex items-center gap-1 shadow-2xs transition" title="Sao chép bản tin của khách hàng này">
-                  <i class="fa-solid fa-copy text-[9px]"></i> Chép bản tin
+                <button id="btnCopy_${item.contractId}" onclick="copySingleReminder('${item.contractId}')" class="text-[9px] bg-white hover:bg-indigo-50 active:scale-95 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded font-semibold flex items-center gap-1 shadow-2xs transition">
+                  <i class="fa-solid fa-copy text-[9px]"></i> Chép tin
                 </button>
-                <button onclick="previewSingleReminder('${item.contractId}')" class="text-[9px] text-slate-500 hover:text-indigo-600 underline" title="Mở rộng xem chi tiết">
+                <button onclick="previewSingleReminder('${item.contractId}')" class="text-[9px] text-slate-500 hover:text-indigo-600 underline">
                   Xem toàn bộ
                 </button>
               </div>
             </div>
           </td>
 
-          <!-- 9. Cột Đôn Đốc 3 Cấp Kèm NÚT LƯU GHI CHÚ -->
+          <!-- 9. Cột Đôn Đốc & Phản Hồi Khách Hàng (Tối đa 3 lần) -->
           <td class="p-1.5 bg-indigo-50/50 border-l border-slate-200">
-            <div class="space-y-1">
-              <div class="grid grid-cols-3 gap-1 text-[9px]">
+            <div class="space-y-1.5">
+              <!-- E. RULE TIẾN ĐỘ ĐÔN ĐỐC 3 CẤP -->
+              <div class="grid grid-cols-3 gap-1 text-[9px] pb-1 border-b border-indigo-100">
+                <!-- 1> TCT đã chuyển tới CQ TCT -->
                 <div>
-                  <div class="flex items-center justify-between font-bold text-indigo-950 mb-0.5">
-                    <span>CQTCT:</span>
-                    <span class="text-[8px] text-slate-400 font-normal truncate">${st.tctTime || ''}</span>
+                  <span class="text-[8px] text-slate-500 block font-bold">1. TCT:</span>
+                  <span class="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[8px] font-bold bg-indigo-100 text-indigo-800" title="TCT đã tự động chuyển cho CQ TCT khi import">
+                    <i class="fa-solid fa-check-double text-[8px]"></i> Đã chuyển
+                  </span>
+                </div>
+
+                <!-- 2> CQ TCT tới CQ BĐT: Chưa gửi (Đỏ) / Đã gửi (Xanh) -->
+                <div>
+                  <div class="flex items-center justify-between font-bold text-slate-700 mb-0.5">
+                    <span>2. CQ TCT:</span>
+                    <span class="text-[8px] text-slate-400 font-normal truncate">${st.cqTctTime || ''}</span>
                   </div>
-                  <select ${!canEditTCT ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'tctStatus', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] ${isTCTSent ? 'text-emerald-700 font-bold border-emerald-400' : 'text-slate-600'}">
-                    <option value="CHUA_GUI" ${st.tctStatus === 'CHUA_GUI' ? 'selected' : ''}>Chưa gửi</option>
-                    <option value="DA_GUI" ${st.tctStatus === 'DA_GUI' ? 'selected' : ''}>✓ Đã gửi</option>
+                  <select ${!canEditCqTct ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'cqTctStatus', this.value)" class="w-full rounded px-1 py-0.5 text-[10px] font-bold border transition ${isCqTctSent ? 'bg-emerald-50 text-emerald-700 border-emerald-400' : 'bg-rose-50 text-rose-700 border-rose-400'}">
+                    <option value="CHUA_GUI" ${st.cqTctStatus === 'CHUA_GUI' ? 'selected' : ''} class="text-rose-700">Chưa gửi</option>
+                    <option value="DA_GUI" ${st.cqTctStatus === 'DA_GUI' ? 'selected' : ''} class="text-emerald-700">Đã gửi</option>
                   </select>
                 </div>
 
+                <!-- 3> CQ BĐT tới NVKD: Chưa gửi (Đỏ) / Đã gửi (Xanh) -->
                 <div>
-                  <div class="flex items-center justify-between font-bold ${canEditCQT ? 'text-blue-950' : 'text-slate-400'} mb-0.5">
-                    <span>CQT:</span>
-                    <span class="text-[8px] text-slate-400 font-normal truncate">${st.cqtTime || ''}</span>
+                  <div class="flex items-center justify-between font-bold text-slate-700 mb-0.5">
+                    <span>3. CQ BĐT:</span>
+                    <span class="text-[8px] text-slate-400 font-normal truncate">${st.cqBdtTime || ''}</span>
                   </div>
-                  <select ${!canEditCQT ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'cqtStatus', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] ${st.cqtStatus === 'DA_GUI' ? 'text-blue-700 font-bold border-blue-400' : 'text-slate-600'}">
-                    <option value="CHUA_GUI" ${st.cqtStatus === 'CHUA_GUI' ? 'selected' : ''}>Chưa gửi</option>
-                    <option value="DA_GUI" ${st.cqtStatus === 'DA_GUI' ? 'selected' : ''}>✓ Đã gửi</option>
-                  </select>
-                </div>
-
-                <div>
-                  <div class="flex items-center justify-between font-bold ${canEditNVKD ? 'text-emerald-950' : 'text-slate-400'} mb-0.5">
-                    <span>NVKD:</span>
-                    <span class="text-[8px] text-slate-400 font-normal truncate">${st.nvkdTime || ''}</span>
-                  </div>
-                  <select ${!canEditNVKD ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'nvkdStatus', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] ${st.nvkdStatus === 'DA_NHAN' ? 'text-emerald-700 font-bold border-emerald-400' : 'text-slate-600'}">
-                    <option value="CHUA_NHAN" ${st.nvkdStatus === 'CHUA_NHAN' ? 'selected' : ''}>Chưa nhắn</option>
-                    <option value="DA_NHAN" ${st.nvkdStatus === 'DA_NHAN' ? 'selected' : ''}>✓ Đã nhắn</option>
+                  <select ${!canEditCqBdt ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'cqBdtStatus', this.value)" class="w-full rounded px-1 py-0.5 text-[10px] font-bold border transition ${isCqBdtSent ? 'bg-emerald-50 text-emerald-700 border-emerald-400' : 'bg-rose-50 text-rose-700 border-rose-400'}">
+                    <option value="CHUA_GUI" ${st.cqBdtStatus === 'CHUA_GUI' ? 'selected' : ''} class="text-rose-700">Chưa gửi</option>
+                    <option value="DA_GUI" ${st.cqBdtStatus === 'DA_GUI' ? 'selected' : ''} class="text-emerald-700">Đã gửi</option>
                   </select>
                 </div>
               </div>
 
-              <!-- Phản hồi khách hàng & Khối Ghi chú kèm nút LƯU -->
-              <div class="grid grid-cols-12 gap-1 pt-0.5 items-center">
-                <div class="col-span-5">
-                  <select ${!canEditNVKD ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'feedback', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] truncate ${st.feedback === 'TIEU_CUC' ? 'border-rose-500 text-rose-700 font-bold bg-rose-50' : 'text-slate-700'}">
-                    <option value="CHUA_LIEN_HE" ${st.feedback === 'CHUA_LIEN_HE' ? 'selected' : ''}>Chưa có phản hồi</option>
-                    <option value="KHONG_NGHE" ${st.feedback === 'KHONG_NGHE' ? 'selected' : ''}>Không nghe / Thuê bao</option>
-                    <option value="DOI_SO" ${st.feedback === 'DOI_SO' ? 'selected' : ''}>Đã đổi số ĐT</option>
-                    <option value="HEN_TRA" ${st.feedback === 'HEN_TRA' ? 'selected' : ''}>Hẹn ngày thanh toán</option>
-                    <option value="DA_TRA" ${st.feedback === 'DA_TRA' ? 'selected' : ''}>Đã nộp tiền / Tra soát</option>
-                    <option value="TIEU_CUC" ${st.feedback === 'TIEU_CUC' ? 'selected' : ''}>Thách thức / Thóa mạ</option>
-                    <option value="KHAC" ${st.feedback === 'KHAC' ? 'selected' : ''}>Khác</option>
-                  </select>
+              <!-- D. KHỐI PHẢN HỒI LẦN 1 -->
+              <div>
+                <div class="flex items-center justify-between mb-0.5">
+                  <span class="text-[9px] font-bold text-slate-600">Phản hồi Lần 1:</span>
                 </div>
-
-                <div class="col-span-5">
-                  <input type="text" id="noteInput_${item.contractId}" ${!canEditNVKD ? 'disabled' : ''} placeholder="${canEditNVKD ? 'Ghi chú...' : 'Khóa'}" value="${st.note || ''}" class="w-full bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] truncate focus:outline-indigo-600">
-                </div>
-
-                <div class="col-span-2 text-right">
-                  <button id="btnSaveNote_${item.contractId}" onclick="saveSingleLoanNote('${item.contractId}')" ${!canEditNVKD ? 'disabled' : ''} class="w-full py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[9px] font-semibold transition flex items-center justify-center gap-0.5 shadow-sm" title="Lưu ghi chú">
-                    <i class="fa-solid fa-floppy-disk text-[8px]"></i> Lưu
-                  </button>
+                <div class="grid grid-cols-12 gap-1 items-center">
+                  <div class="col-span-5">
+                    <select ${!canEditFeedback ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'feedback', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] truncate ${st.feedback === 'TIEU_CUC' ? 'border-rose-500 text-rose-700 font-bold bg-rose-50' : 'text-slate-700'}">
+                      <option value="CHUA_LIEN_HE" ${st.feedback === 'CHUA_LIEN_HE' ? 'selected' : ''}>Chưa có phản hồi</option>
+                      <option value="KHONG_NGHE" ${st.feedback === 'KHONG_NGHE' ? 'selected' : ''}>Không nghe / Thuê bao</option>
+                      <option value="DOI_SO" ${st.feedback === 'DOI_SO' ? 'selected' : ''}>Đã đổi số ĐT</option>
+                      <option value="HEN_TRA" ${st.feedback === 'HEN_TRA' ? 'selected' : ''}>Hẹn ngày thanh toán</option>
+                      <option value="DA_TRA" ${st.feedback === 'DA_TRA' ? 'selected' : ''}>Đã nộp tiền / Tra soát</option>
+                      <option value="TIEU_CUC" ${st.feedback === 'TIEU_CUC' ? 'selected' : ''}>Thách thức / Thóa mạ</option>
+                      <option value="KHAC" ${st.feedback === 'KHAC' ? 'selected' : ''}>Khác</option>
+                    </select>
+                  </div>
+                  <div class="col-span-6">
+                    <input type="text" id="noteInput_${item.contractId}" ${!canEditFeedback ? 'disabled' : ''} placeholder="${canEditFeedback ? 'Ghi chú lần 1...' : 'Khóa'}" value="${st.note || ''}" class="w-full bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] truncate focus:outline-indigo-600">
+                  </div>
+                  <div class="col-span-1 text-right">
+                    <button id="btnSave_1_${item.contractId}" onclick="saveSingleLoanNote('${item.contractId}', 1)" ${!canEditFeedback ? 'disabled' : ''} class="p-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[9px] shadow-sm flex items-center justify-center" title="Lưu Lần 1">
+                      <i class="fa-solid fa-floppy-disk"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
+
+              <!-- D. KHỐI PHẢN HỒI LẦN 2 (CHỈ HIỂN THỊ KHI ĐÃ CÓ PHẢN HỒI LẦN 1) -->
+              ${hasFeedback1 ? `
+              <div class="pt-1 border-t border-dashed border-slate-200">
+                <div class="flex items-center justify-between mb-0.5">
+                  <span class="text-[9px] font-bold text-blue-700">Phản hồi Lần 2:</span>
+                </div>
+                <div class="grid grid-cols-12 gap-1 items-center">
+                  <div class="col-span-5">
+                    <select ${!canEditFeedback ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'feedback2', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] truncate ${st.feedback2 === 'TIEU_CUC' ? 'border-rose-500 text-rose-700 font-bold bg-rose-50' : 'text-slate-700'}">
+                      <option value="CHUA_LIEN_HE" ${st.feedback2 === 'CHUA_LIEN_HE' ? 'selected' : ''}>-- Chọn phản hồi Lần 2 --</option>
+                      <option value="KHONG_NGHE" ${st.feedback2 === 'KHONG_NGHE' ? 'selected' : ''}>Không nghe / Thuê bao</option>
+                      <option value="DOI_SO" ${st.feedback2 === 'DOI_SO' ? 'selected' : ''}>Đã đổi số ĐT</option>
+                      <option value="HEN_TRA" ${st.feedback2 === 'HEN_TRA' ? 'selected' : ''}>Hẹn ngày thanh toán</option>
+                      <option value="DA_TRA" ${st.feedback2 === 'DA_TRA' ? 'selected' : ''}>Đã nộp tiền / Tra soát</option>
+                      <option value="TIEU_CUC" ${st.feedback2 === 'TIEU_CUC' ? 'selected' : ''}>Thách thức / Thóa mạ</option>
+                      <option value="KHAC" ${st.feedback2 === 'KHAC' ? 'selected' : ''}>Khác</option>
+                    </select>
+                  </div>
+                  <div class="col-span-6">
+                    <input type="text" id="note2Input_${item.contractId}" ${!canEditFeedback ? 'disabled' : ''} placeholder="${canEditFeedback ? 'Ghi chú lần 2...' : 'Khóa'}" value="${st.note2 || ''}" class="w-full bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] truncate focus:outline-indigo-600">
+                  </div>
+                  <div class="col-span-1 text-right">
+                    <button id="btnSave_2_${item.contractId}" onclick="saveSingleLoanNote('${item.contractId}', 2)" ${!canEditFeedback ? 'disabled' : ''} class="p-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[9px] shadow-sm flex items-center justify-center" title="Lưu Lần 2">
+                      <i class="fa-solid fa-floppy-disk"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              ` : ''}
+
+              <!-- D. KHỐI PHẢN HỒI LẦN 3 (CHỈ HIỂN THỊ KHI ĐÃ CÓ PHẢN HỒI LẦN 2) -->
+              ${(hasFeedback1 && hasFeedback2) ? `
+              <div class="pt-1 border-t border-dashed border-amber-200 bg-amber-50/40 p-1 rounded">
+                <div class="flex items-center justify-between mb-0.5">
+                  <span class="text-[9px] font-bold text-amber-800">Phản hồi Lần 3 (Răn đe / Xử lý sâu):</span>
+                </div>
+                <div class="grid grid-cols-12 gap-1 items-center">
+                  <div class="col-span-5">
+                    <select ${!canEditFeedback ? 'disabled' : ''} onchange="handleCascadeUpdate('${item.contractId}', 'feedback3', this.value)" class="w-full bg-white border border-slate-300 rounded px-1 py-0.5 text-[10px] truncate ${st.feedback3 === 'TIEU_CUC' ? 'border-rose-500 text-rose-700 font-bold bg-rose-50' : 'text-slate-700'}">
+                      <option value="CHUA_LIEN_HE" ${st.feedback3 === 'CHUA_LIEN_HE' ? 'selected' : ''}>-- Chọn phản hồi Lần 3 --</option>
+                      <option value="KHONG_NGHE" ${st.feedback3 === 'KHONG_NGHE' ? 'selected' : ''}>Không nghe / Thuê bao</option>
+                      <option value="DOI_SO" ${st.feedback3 === 'DOI_SO' ? 'selected' : ''}>Đã đổi số ĐT</option>
+                      <option value="HEN_TRA" ${st.feedback3 === 'HEN_TRA' ? 'selected' : ''}>Hẹn ngày thanh toán</option>
+                      <option value="DA_TRA" ${st.feedback3 === 'DA_TRA' ? 'selected' : ''}>Đã nộp tiền / Tra soát</option>
+                      <option value="TIEU_CUC" ${st.feedback3 === 'TIEU_CUC' ? 'selected' : ''}>Thách thức / Thóa mạ</option>
+                      <option value="KHAC" ${st.feedback3 === 'KHAC' ? 'selected' : ''}>Khác</option>
+                    </select>
+                  </div>
+                  <div class="col-span-6">
+                    <input type="text" id="note3Input_${item.contractId}" ${!canEditFeedback ? 'disabled' : ''} placeholder="${canEditFeedback ? 'Ghi chú lần 3...' : 'Khóa'}" value="${st.note3 || ''}" class="w-full bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] truncate focus:outline-indigo-600">
+                  </div>
+                  <div class="col-span-1 text-right">
+                    <button id="btnSave_3_${item.contractId}" onclick="saveSingleLoanNote('${item.contractId}', 3)" ${!canEditFeedback ? 'disabled' : ''} class="p-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[9px] shadow-sm flex items-center justify-center" title="Lưu Lần 3">
+                      <i class="fa-solid fa-floppy-disk"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              ` : ''}
+
             </div>
           </td>
         `;
         tbody.appendChild(tr);
-      }
+      });
     }
 
-    // CẬP NHẬT TRẠNG THÁI LIÊN HOÀN
+    // CẬP NHẬT TRẠNG THÁI LIÊN HOÀN (CASCADE)
     function handleCascadeUpdate(contractId, field, value) {
       const timeStr = getNowFormatted();
       const item = rawDataset.find(d => d.contractId === contractId);
       if (item) {
         item.status[field] = value;
 
-        if (field === 'tctStatus') {
-          if (value === 'DA_GUI') item.status.tctTime = timeStr;
-          else {
-            item.status.tctTime = '';
-            item.status.cqtStatus = 'CHUA_GUI';
-            item.status.cqtTime = '';
-            item.status.nvkdStatus = 'CHUA_NHAN';
-            item.status.nvkdTime = '';
+        if (field === 'cqTctStatus') {
+          item.status.cqTctTime = (value === 'DA_GUI') ? timeStr : '';
+          if (value === 'CHUA_GUI') {
+            item.status.cqBdtStatus = 'CHUA_GUI';
+            item.status.cqBdtTime = '';
           }
-        } else if (field === 'cqtStatus') {
-          if (value === 'DA_GUI') item.status.cqtTime = timeStr;
-          else {
-            item.status.cqtTime = '';
-            item.status.nvkdStatus = 'CHUA_NHAN';
-            item.status.nvkdTime = '';
-          }
-        } else if (field === 'nvkdStatus') {
-          if (value === 'DA_NHAN') item.status.nvkdTime = timeStr;
-          else item.status.nvkdTime = '';
+        } else if (field === 'cqBdtStatus') {
+          item.status.cqBdtTime = (value === 'DA_GUI') ? timeStr : '';
         }
 
         item.status.lastUpdated = `${timeStr} (${currentUser.unitName})`;
@@ -1923,96 +2049,61 @@
         }
 
         updateKPIs(currentFilteredData);
-        renderTable(currentFilteredData);
+        // Render lại trang để cập nhật logic hiển thị thêm lần 2 và lần 3 ngay lập tức
+        renderTablePaginated();
       }
     }
 
-    // ==================== BỘ CÔNG CỤ SAO CHÉP MẠNH MẼ ĐA NỀN TẢNG (ROBUST CLIPBOARD & POPUP) ====================
-    async function copyTextToClipboard(textToCopy, successMsg = "Đã sao chép thành công!", errorMsg = "Không thể sao chép tự động!") {
+    // SAO CHÉP BẢN TIN VĂN BẢN
+    async function copyTextToClipboard(textToCopy, successMsg = "Đã sao chép thành công!") {
       if (!textToCopy || !textToCopy.trim()) {
-        showToast("Không có nội dung bản tin để sao chép!", "error", "Lỗi dữ liệu");
+        showToast("Không có nội dung để sao chép!", "error");
         return false;
       }
-
       let isSuccess = false;
-
-      // Phương pháp 1: Sử dụng Clipboard API hiện đại
       if (navigator.clipboard && window.isSecureContext) {
         try {
           await navigator.clipboard.writeText(textToCopy);
           isSuccess = true;
-        } catch (err) {
-          console.warn("Clipboard API bị chặn, chuyển sang fallback execCommand:", err);
-        }
+        } catch (err) {}
       }
-
-      // Phương pháp 2: Fallback tạo textarea ẩn và document.execCommand('copy')
       if (!isSuccess) {
         try {
           const textArea = document.createElement("textarea");
           textArea.value = textToCopy;
           textArea.style.position = "fixed";
-          textArea.style.top = "0";
-          textArea.style.left = "0";
-          textArea.style.width = "2em";
-          textArea.style.height = "2em";
-          textArea.style.padding = "0";
-          textArea.style.border = "none";
-          textArea.style.outline = "none";
-          textArea.style.boxShadow = "none";
-          textArea.style.background = "transparent";
           textArea.style.opacity = "0";
-          textArea.setAttribute("readonly", "");
           document.body.appendChild(textArea);
           textArea.focus();
           textArea.select();
-          textArea.setSelectionRange(0, textArea.value.length);
           isSuccess = document.execCommand("copy");
           document.body.removeChild(textArea);
-        } catch (err) {
-          console.error("Lỗi execCommand:", err);
-        }
+        } catch (err) {}
       }
-
-      // Phản hồi kết quả bằng Pop-up Toast
       if (isSuccess) {
-        showToast(successMsg, "success", "Sao chép thành công");
+        showToast(successMsg, "success");
         return true;
       } else {
-        // Fallback an toàn: Mở Modal hiển thị văn bản để người dùng bấm nút sao chép hoặc Ctrl+C
-        showToast(errorMsg + " Đã mở cửa sổ văn bản để sao chép.", "warning", "Cần xác nhận");
         openCopyPreviewModal("BẢN TIN NHẮC NỢ", textToCopy);
         return false;
       }
     }
 
-    // 1. Sao chép 1 bản tin đơn lẻ
     async function copySingleReminder(contractId) {
       const item = rawDataset.find(d => d.contractId === contractId);
-      if (!item) {
-        showToast("Không tìm thấy thông tin hợp đồng!", "error", "Lỗi thao tác");
-        return;
-      }
-
-      // Đảm bảo nội dung bản tin luôn được cập nhật chính xác theo số ngày và số lần
+      if (!item) return;
       const message = item.reminderMsg || buildReminderMessage(item.customerName, item.customerPhone, item.contractId, item.overdueDays, item.outstandingDue, item.staffName, item.staffCode, item.province, item.reminderCount);
-      const success = await copyTextToClipboard(message, `Đã chép bản tin nhắc nợ của KH: ${item.customerName}`);
-
+      const success = await copyTextToClipboard(message, `Đã chép bản tin của KH: ${item.customerName}`);
       if (success) {
         const btn = document.getElementById(`btnCopy_${contractId}`);
         if (btn) {
-          const originalHtml = btn.innerHTML;
+          const original = btn.innerHTML;
           btn.innerHTML = '<i class="fa-solid fa-check text-emerald-600"></i> Đã chép!';
-          btn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-300");
-          setTimeout(() => {
-            btn.innerHTML = originalHtml;
-            btn.classList.remove("bg-emerald-50", "text-emerald-700", "border-emerald-300");
-          }, 2000);
+          setTimeout(() => { btn.innerHTML = original; }, 2000);
         }
       }
     }
 
-    // Xem trước 1 bản tin đơn lẻ
     function previewSingleReminder(contractId) {
       const item = rawDataset.find(d => d.contractId === contractId);
       if (!item) return;
@@ -2020,52 +2111,34 @@
       openCopyPreviewModal(`BẢN TIN KH: ${item.customerName} (HĐ: ${item.contractId})`, message);
     }
 
-    // 2. Sao chép các bản tin đã tick chọn
     async function copySelectedReminders() {
       if (selectedContractIds.size === 0) {
-        showToast("Bạn chưa tick chọn khoản nợ nào! Vui lòng tick vào ô ở cột đầu tiên.", "warning", "Chưa chọn bản tin");
+        showToast("Vui lòng tick chọn ít nhất 1 khoản vay!", "warning");
         return;
       }
-
       const selectedList = rawDataset.filter(d => selectedContractIds.has(d.contractId));
-      if (selectedList.length === 0) {
-        showToast("Không tìm thấy dữ liệu của các khoản nợ đã chọn!", "error", "Lỗi dữ liệu");
-        return;
-      }
-
-      let text = `=== DANH SÁCH ${selectedList.length} BẢN TIN NHẮC NỢ ĐÃ CHỌN (${new Date().toLocaleDateString('vi-VN')}) ===\n\n`;
+      let text = `=== DANH SÁCH ${selectedList.length} BẢN TIN NHẮC NỢ ĐÃ CHỌN ===\n\n`;
       selectedList.forEach((item, idx) => {
         const msg = item.reminderMsg || buildReminderMessage(item.customerName, item.customerPhone, item.contractId, item.overdueDays, item.outstandingDue, item.staffName, item.staffCode, item.province, item.reminderCount);
-        text += `[Bản tin ${idx + 1}] KH: ${item.customerName} - SĐT: ${item.customerPhone || '---'} - HĐ: ${item.contractId}\n`;
-        text += `Nội dung: "${msg}"\n`;
-        text += `------------------------------------------------------------\n`;
+        text += `[${idx + 1}] KH: ${item.customerName} - SĐT: ${item.customerPhone || '---'} - HĐ: ${item.contractId}\nNội dung: "${msg}"\n------------------------------------------------------------\n`;
       });
-
-      await copyTextToClipboard(text, `Đã sao chép toàn bộ ${selectedList.length} bản tin đã tick chọn!`);
+      await copyTextToClipboard(text, `Đã sao chép ${selectedList.length} bản tin đã chọn!`);
     }
 
-    // 3. Sao chép toàn bộ bản tin trong bộ lọc hiện tại
     async function copyCurrentUnitBatchReminders() {
       if (!currentFilteredData || currentFilteredData.length === 0) {
-        showToast("Danh sách hiện tại đang trống, không có bản tin nào để sao chép!", "warning", "Danh sách rỗng");
+        showToast("Danh sách hiện tại đang trống!", "warning");
         return;
       }
-
       const total = currentFilteredData.length;
-      let text = `=== BẢN TIN NHẮC NỢ TOÀN BỘ DANH SÁCH (${new Date().toLocaleDateString('vi-VN')}) ===\n`;
-      text += `Tổng số bản tin: ${total} khoản\n\n`;
-
+      let text = `=== BẢN TIN NHẮC NỢ (TỔNG SỐ: ${total} KHOẢN) ===\n\n`;
       currentFilteredData.forEach((item, idx) => {
         const msg = item.reminderMsg || buildReminderMessage(item.customerName, item.customerPhone, item.contractId, item.overdueDays, item.outstandingDue, item.staffName, item.staffCode, item.province, item.reminderCount);
-        text += `[${idx + 1}] KH: ${item.customerName} - SĐT: ${item.customerPhone || '---'} - HĐ: ${item.contractId}\n`;
-        text += `Nội dung: "${msg}"\n`;
-        text += `------------------------------------------------------------\n`;
+        text += `[${idx + 1}] KH: ${item.customerName} - SĐT: ${item.customerPhone || '---'} - HĐ: ${item.contractId}\nNội dung: "${msg}"\n------------------------------------------------------------\n`;
       });
-
-      await copyTextToClipboard(text, `Đã sao chép thành công toàn bộ ${total} bản tin trong danh sách!`);
+      await copyTextToClipboard(text, `Đã sao chép toàn bộ ${total} bản tin!`);
     }
 
-    // Modal Fallback để xem/sao chép bản tin khi cần
     function openCopyPreviewModal(title, content) {
       document.getElementById('copyModalTitle').innerText = title;
       document.getElementById('copyModalTextarea').value = content;
@@ -2079,37 +2152,22 @@
     function copyFromModalTextarea() {
       const textarea = document.getElementById('copyModalTextarea');
       textarea.select();
-      textarea.setSelectionRange(0, textarea.value.length);
-      try {
-        const success = document.execCommand('copy');
-        if (success) {
-          showToast("Đã sao chép nội dung văn bản thành công!", "success", "Thành công");
-          closeCopyPreviewModal();
-        } else {
-          showToast("Vui lòng nhấn phím Ctrl + C để sao chép thủ công!", "info", "Hướng dẫn");
-        }
-      } catch (e) {
-        showToast("Vui lòng nhấn phím Ctrl + C để sao chép thủ công!", "info", "Hướng dẫn");
-      }
+      document.execCommand('copy');
+      showToast("Đã sao chép văn bản thành công!");
+      closeCopyPreviewModal();
     }
 
-    // XÓA DỮ LIỆU CẦN MẬT KHẨU 123456
     function promptDeleteAllData() {
       if (currentUser.role !== 'ADMIN') {
         alert("Chỉ tài khoản Tổng Công Ty mới có quyền xóa dữ liệu nạp!");
         return;
       }
-
-      const confirmPass = prompt("XÁC NHẬN BẢO MẬT: Nhập mật khẩu quản trị để xóa toàn bộ dữ liệu nạp:");
-      if (confirmPass === null) return;
+      const confirmPass = prompt("XÁC NHẬN BẢO MẬT: Nhập mật khẩu quản trị để xóa toàn bộ dữ liệu:");
       if (confirmPass !== "123456") {
-        alert("Mật khẩu không chính xác! Thao tác xóa dữ liệu bị hủy bỏ.");
+        alert("Mật khẩu không chính xác!");
         return;
       }
-
-      if (!confirm("CẢNH BÁO LẦN CUỐI: Toàn bộ dữ liệu các khoản nợ nạp hôm nay và lịch sử trạng thái sẽ bị xóa sạch.\nBạn có chắc chắn tiếp tục không?")) {
-        return;
-      }
+      if (!confirm("Bạn có chắc chắn muốn xóa toàn bộ dữ liệu nạp hôm nay không?")) return;
 
       rawDataset = [];
       settledLoansList = [];
@@ -2130,10 +2188,10 @@
       document.getElementById('currentFileDateText').innerText = "Vui lòng liên hệ Admin TCT để nạp dữ liệu.";
 
       refreshAllUI();
-      showToast("Đã xóa sạch toàn bộ dữ liệu nạp thành công!");
+      showToast("Đã xóa sạch dữ liệu nạp!");
     }
 
-    // NẠP DỮ LIỆU EXCEL TCT
+    // E. 1> IMPORT FILE: TỰ CHUYỂN TRẠNG THÁI ĐÔN ĐỐC TCT (ĐÃ CHUYỂN) TỚI CQ TCT
     function handleAdminFileUpload(e) {
       if (currentUser.role !== 'ADMIN') return;
       const file = e.target.files[0];
@@ -2165,11 +2223,12 @@
       reader.readAsArrayBuffer(file);
     }
 
-        function processImportData(jsonRows, headerRowIndex, fileName) {
+    function processImportData(jsonRows, headerRowIndex, fileName) {
       const oldLoansMap = {};
       rawDataset.forEach(d => { oldLoansMap[d.contractId] = d; });
       const currentImportIds = new Set();
       const newDataset = [];
+      const importTimeStr = getNowFormatted();
 
       for (let r = headerRowIndex + 1; r < jsonRows.length; r++) {
         const row = jsonRows[r];
@@ -2191,26 +2250,31 @@
 
         const matchedUnit = UNIT_DEFINITIONS.find(u => province.includes(u.name) || u.name.includes(province)) || { code: "OTHER" };
 
-        // QUẢN TRỊ SỐ LẦN NHẮC NỢ LŨY KẾ:
-        // Nếu hợp đồng đã từng xuất hiện ở file trước:
         let reminderCount = 1;
-        let prevStatus = {
-          tctStatus: "CHUA_GUI",
-          tctTime: "",
-          cqtStatus: "CHUA_GUI",
-          cqtTime: "",
-          nvkdStatus: "CHUA_NHAN",
-          nvkdTime: "",
-          feedback: "CHUA_LIEN_HE",
+        // E. RULE 1 & 2 & 3:
+        // TCT (admin) import file thành công -> Chuyển trạng thái đôn đốc: TCT (Đã chuyển) tới CQ TCT
+        // CQ TCT tới CQ BĐT: Mặc định ban đầu Chưa gửi (Màu đỏ)
+        // CQ BĐT tới NVKD: Mặc định ban đầu Chưa gửi (Màu đỏ)
+        let statusObj = {
+          tctStatus: "DA_CHUYEN",           // TCT (Đã chuyển) tới CQ TCT
+          tctTime: importTimeStr,
+          cqTctStatus: "CHUA_GUI",          // CQ TCT tới CQ BĐT: Chưa gửi (Đỏ)
+          cqTctTime: "",
+          cqBdtStatus: "CHUA_GUI",          // CQ BĐT tới NVKD: Chưa gửi (Đỏ)
+          cqBdtTime: "",
+          feedback: "CHUA_LIEN_HE",         // Phản hồi Lần 1
           note: "",
-          lastUpdated: ""
+          feedback2: "CHUA_LIEN_HE",        // Phản hồi Lần 2 (khi có Lần 1)
+          note2: "",
+          feedback3: "CHUA_LIEN_HE",        // Phản hồi Lần 3 (khi có Lần 2)
+          note3: "",
+          lastUpdated: `${importTimeStr} (TCT Import)`
         };
 
         if (oldLoansMap[contractId]) {
           const old = oldLoansMap[contractId];
-          prevStatus = old.status;
-          // Nếu ở file trước NVKD đã nhắn tin hoặc CQT đã gửi -> tăng số lần nhắc nợ lên 1 bậc
-          const hadBeenReminded = (old.status.nvkdStatus === 'DA_NHAN' || old.status.cqtStatus === 'DA_GUI' || old.status.tctStatus === 'DA_GUI');
+          statusObj = { ...old.status, tctStatus: "DA_CHUYEN", tctTime: importTimeStr };
+          const hadBeenReminded = (old.status.cqBdtStatus === 'DA_GUI' || old.status.cqTctStatus === 'DA_GUI');
           reminderCount = hadBeenReminded ? ((parseInt(old.reminderCount) || 1) + 1) : (parseInt(old.reminderCount) || 1);
         }
 
@@ -2228,13 +2292,13 @@
           customerPhone,
           outstandingDue,
           totalDebt,
-          reminderCount, // Lưu số lần nhắc nợ
+          reminderCount,
           reminderMsg,
-          status: prevStatus
+          status: statusObj
         });
       }
 
-      // ĐỐI SOÁT QUẢN TRỊ HIỆU QUẢ: Hợp đồng có ở file hôm qua nhưng không còn xuất hiện hôm nay -> ĐÃ THANH TOÁN THÀNH CÔNG!
+      // Phát hiện hợp đồng đã thanh toán
       const newlySettled = [];
       Object.keys(oldLoansMap).forEach(cid => {
         if (!currentImportIds.has(cid)) {
@@ -2250,9 +2314,9 @@
             staffCode: oldItem.staffCode,
             outstandingDue: oldItem.outstandingDue,
             totalDebt: oldItem.totalDebt,
-            reminderCountBeforeSettled: oldItem.reminderCount || 1, // Số lần đã đôn đốc trước khi trả
-            lastFeedback: oldItem.status.feedback,
-            settledDate: getDateString(new Date()) // Ngày ghi nhận tất toán
+            reminderCountBeforeSettled: oldItem.reminderCount || 1,
+            lastFeedback: oldItem.status.feedback3 || oldItem.status.feedback2 || oldItem.status.feedback,
+            settledDate: getDateString(new Date())
           });
         }
       });
@@ -2283,56 +2347,45 @@
       updateFileNotice(metadata);
       initProvinceDropdown();
       refreshAllUI();
-      showToast(`Đã import ${rawDataset.length} khoản nợ! Phát hiện ${newlySettled.length} khoản đã thanh toán thành công.`);
+      showToast(`Nạp thành công ${rawDataset.length} khoản! TCT đã tự động chuyển đôn đốc tới CQ TCT.`);
     }
 
     function refreshAllUI() {
-      applyFilters();
+      applyFilters(true);
       renderReports();
       renderDailyRemindersManagement();
       renderEffectivenessView();
     }
 
-    // ĐIỀU HƯỚNG 4 TABS CHÍNH
+    // ĐIỀU HƯỚNG TABS
     function switchMainTab(tab) {
-      const v1 = document.getElementById('viewDashboard');
-      const v2 = document.getElementById('viewReports');
-      const v3 = document.getElementById('viewRemindersMgmt');
-      const v4 = document.getElementById('viewEffectiveness');
-      const b1 = document.getElementById('tabBtn1');
-      const b2 = document.getElementById('tabBtn2');
-      const b3 = document.getElementById('tabBtn3');
-      const b4 = document.getElementById('tabBtn4');
+      const tabs = ['viewDashboard', 'viewReports', 'viewRemindersMgmt', 'viewEffectiveness'];
+      const btns = ['tabBtn1', 'tabBtn2', 'tabBtn3', 'tabBtn4'];
 
-      b1.className = "py-1.5 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 whitespace-nowrap";
-      b2.className = "py-1.5 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 whitespace-nowrap";
-      b3.className = "py-1.5 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 whitespace-nowrap";
-      b4.className = "py-1.5 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 whitespace-nowrap";
-      v1.classList.add('hidden');
-      v2.classList.add('hidden');
-      v3.classList.add('hidden');
-      v4.classList.add('hidden');
+      tabs.forEach(t => document.getElementById(t).classList.add('hidden'));
+      btns.forEach(b => {
+        document.getElementById(b).className = "py-1.5 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 whitespace-nowrap";
+      });
 
       if (tab === 'dashboard') {
-        v1.classList.remove('hidden');
-        b1.className = "py-1.5 px-3 text-xs font-bold border-b-2 border-indigo-600 text-indigo-700 flex items-center gap-1.5 whitespace-nowrap";
+        document.getElementById('viewDashboard').classList.remove('hidden');
+        document.getElementById('tabBtn1').className = "py-1.5 px-3 text-xs font-bold border-b-2 border-indigo-600 text-indigo-700 flex items-center gap-1.5 whitespace-nowrap";
       } else if (tab === 'reports') {
-        v2.classList.remove('hidden');
-        b2.className = "py-1.5 px-3 text-xs font-bold border-b-2 border-indigo-600 text-indigo-700 flex items-center gap-1.5 whitespace-nowrap";
+        document.getElementById('viewReports').classList.remove('hidden');
+        document.getElementById('tabBtn2').className = "py-1.5 px-3 text-xs font-bold border-b-2 border-indigo-600 text-indigo-700 flex items-center gap-1.5 whitespace-nowrap";
         renderReports();
       } else if (tab === 'reminders_mgmt') {
-        v3.classList.remove('hidden');
-        b3.className = "py-1.5 px-3 text-xs font-bold border-b-2 border-indigo-600 text-indigo-700 flex items-center gap-1.5 whitespace-nowrap";
+        document.getElementById('viewRemindersMgmt').classList.remove('hidden');
+        document.getElementById('tabBtn3').className = "py-1.5 px-3 text-xs font-bold border-b-2 border-indigo-600 text-indigo-700 flex items-center gap-1.5 whitespace-nowrap";
         renderDailyRemindersManagement();
-      renderEffectivenessView();
       } else if (tab === 'effectiveness') {
-        v4.classList.remove('hidden');
-        b4.className = "py-1.5 px-3 text-xs font-bold border-b-2 border-indigo-600 text-indigo-700 flex items-center gap-1.5 whitespace-nowrap";
+        document.getElementById('viewEffectiveness').classList.remove('hidden');
+        document.getElementById('tabBtn4').className = "py-1.5 px-3 text-xs font-bold border-b-2 border-indigo-600 text-indigo-700 flex items-center gap-1.5 whitespace-nowrap";
         renderEffectivenessView();
       }
     }
 
-    // BÁO CÁO XẾP HẠNG
+    // XẾP HẠNG ĐƠN VỊ
     let currentSortOrder = 'DESC';
     function renderUnitRanking(order) {
       currentSortOrder = order;
@@ -2349,7 +2402,7 @@
       }
 
       unitsList.forEach(u => {
-        unitMap[u.name] = { name: u.name, code: u.code, count: 0, totalDue: 0, totalDebt: 0, cqtDone: 0, nvkdDone: 0 };
+        unitMap[u.name] = { name: u.name, code: u.code, count: 0, totalDue: 0, totalDebt: 0, cqTctDone: 0, cqBdtDone: 0 };
       });
 
       rawDataset.forEach(d => {
@@ -2363,13 +2416,13 @@
         const u = UNIT_DEFINITIONS.find(unit => d.province.includes(unit.name) || unit.name.includes(d.province));
         const key = u ? u.name : d.province;
         if (!unitMap[key]) {
-          unitMap[key] = { name: key, code: d.unitCode || "---", count: 0, totalDue: 0, totalDebt: 0, cqtDone: 0, nvkdDone: 0 };
+          unitMap[key] = { name: key, code: d.unitCode || "---", count: 0, totalDue: 0, totalDebt: 0, cqTctDone: 0, cqBdtDone: 0 };
         }
         unitMap[key].count++;
         unitMap[key].totalDue += (d.outstandingDue || 0);
         unitMap[key].totalDebt += (d.totalDebt || 0);
-        if (d.status.tctStatus === 'DA_GUI') unitMap[key].cqtDone++;
-        if (d.status.nvkdStatus === 'DA_NHAN') unitMap[key].nvkdDone++;
+        if (d.status.cqTctStatus === 'DA_GUI') unitMap[key].cqTctDone++;
+        if (d.status.cqBdtStatus === 'DA_GUI') unitMap[key].cqBdtDone++;
       });
 
       let list = Object.values(unitMap);
@@ -2378,8 +2431,8 @@
       const tbody = document.getElementById('unitRankingTableBody');
       tbody.innerHTML = '';
       list.forEach((u, idx) => {
-        const cqtPct = u.count > 0 ? Math.round((u.cqtDone / u.count) * 100) : 0;
-        const nvkdPct = u.count > 0 ? Math.round((u.nvkdDone / u.count) * 100) : 0;
+        const cqTctPct = u.count > 0 ? Math.round((u.cqTctDone / u.count) * 100) : 0;
+        const cqBdtPct = u.count > 0 ? Math.round((u.cqBdtDone / u.count) * 100) : 0;
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50";
         tr.innerHTML = `
@@ -2388,8 +2441,8 @@
           <td class="p-1.5 text-center font-bold">${u.count}</td>
           <td class="p-1.5 text-right text-rose-600 font-medium">${formatVND(u.totalDue)}</td>
           <td class="p-1.5 text-right font-bold text-slate-800">${formatVND(u.totalDebt)}</td>
-          <td class="p-1.5 text-center"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${cqtPct > 50 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}">${cqtPct}%</span></td>
-          <td class="p-1.5 text-center"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${nvkdPct > 50 ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}">${nvkdPct}%</span></td>
+          <td class="p-1.5 text-center"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${cqTctPct > 50 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${cqTctPct}%</span></td>
+          <td class="p-1.5 text-center"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${cqBdtPct > 50 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${cqBdtPct}%</span></td>
         `;
         tbody.appendChild(tr);
       });
@@ -2398,9 +2451,6 @@
     function renderReports() {
       renderUnitRanking(currentSortOrder);
       const reportDataset = currentFilteredData;
-
-      document.getElementById('topStaffHeaderTitle').innerHTML = `<i class="fa-solid fa-user-tie text-blue-600"></i> TOP 20 NVKD CÓ NỢ QUÁ HẠN CAO NHẤT ${currentUser.role !== 'ADMIN' ? `(${currentUser.unitName})` : ''}`;
-      document.getElementById('unclaimedHeaderTitle').innerHTML = `<i class="fa-solid fa-user-xmark text-rose-500"></i> TOP 20 KHOẢN NỢ VÔ THỪA NHẬN ${currentUser.role !== 'ADMIN' ? `(${currentUser.unitName})` : ''}`;
 
       const staffMap = {};
       reportDataset.forEach(d => {
@@ -2469,122 +2519,38 @@
       });
     }
 
-    // QUẢN TRỊ ĐÔN ĐỐC & PHẢN HỒI KH THEO NGÀY
     function getDateString(d) {
       return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
     }
-    function getShortDateString(d) {
-      return `${d.getDate()}/${d.getMonth() + 1}`;
-    }
-    function matchDateInTimeString(timeStr, targetDate) {
-      if (!timeStr) return false;
-      const fullDateStr = getDateString(targetDate);
-      const shortDateStr = getShortDateString(targetDate);
-      return timeStr.includes(fullDateStr) || timeStr.includes(shortDateStr);
-    }
 
+    // QUẢN TRỊ TIẾN ĐỘ ĐÔN ĐỐC & PHẢN HỒI KH
     function renderDailyRemindersManagement() {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-
-      const strToday = getDateString(today);
-      const strYesterday = getDateString(yesterday);
-
-      document.getElementById('lblTodayDate').innerText = strToday;
-      document.getElementById('lblYesterdayDate').innerText = strYesterday;
-
       const dataset = currentFilteredData;
 
-      let tctToday = 0, tctYesterday = 0;
-      let cqtToday = 0, cqtYesterday = 0;
-      let nvkdToday = 0, nvkdYesterday = 0;
+      let tctTransferred = 0;
+      let cqTctDa = 0, cqTctChua = 0;
+      let cqBdtDa = 0, cqBdtChua = 0;
 
       const feedbackCounts = {
         'HEN_TRA': 0, 'DA_TRA': 0, 'KHONG_NGHE': 0, 'DOI_SO': 0, 'TIEU_CUC': 0, 'CHUA_LIEN_HE': 0, 'KHAC': 0
       };
 
-      const unitMap = {};
-      let unitsList = UNIT_DEFINITIONS;
-      if (currentUser.role === 'OFFICER') {
-        const assignedSet = new Set(currentUser.assignedUnits);
-        unitsList = UNIT_DEFINITIONS.filter(u => assignedSet.has(u.code));
-      } else if (currentUser.role === 'UNIT') {
-        unitsList = UNIT_DEFINITIONS.filter(u => u.code === currentUser.unitCode || u.name === currentUser.unitName);
-      }
-
-      unitsList.forEach(u => {
-        unitMap[u.name] = {
-          name: u.name, code: u.code, totalLoans: 0,
-          tctToday: 0, tctYesterday: 0, cqtToday: 0, cqtYesterday: 0, nvkdToday: 0, nvkdYesterday: 0,
-          positiveCount: 0, riskCount: 0
-        };
-      });
-
       dataset.forEach(item => {
         const st = item.status;
-        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
-        const unitKey = u ? u.name : item.province;
-        if (!unitMap[unitKey]) {
-          unitMap[unitKey] = {
-            name: unitKey, code: item.unitCode || "---", totalLoans: 0,
-            tctToday: 0, tctYesterday: 0, cqtToday: 0, cqtYesterday: 0, nvkdToday: 0, nvkdYesterday: 0,
-            positiveCount: 0, riskCount: 0
-          };
-        }
-        unitMap[unitKey].totalLoans++;
+        if (st.tctStatus === 'DA_CHUYEN') tctTransferred++;
+        if (st.cqTctStatus === 'DA_GUI') cqTctDa++; else cqTctChua++;
+        if (st.cqBdtStatus === 'DA_GUI') cqBdtDa++; else cqBdtChua++;
 
-        if (st.tctStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.tctTime, today)) {
-            tctToday++; unitMap[unitKey].tctToday++;
-          } else if (matchDateInTimeString(st.tctTime, yesterday)) {
-            tctYesterday++; unitMap[unitKey].tctYesterday++;
-          } else if (!st.tctTime) {
-            tctToday++; unitMap[unitKey].tctToday++;
-          }
-        }
-
-        if (st.cqtStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.cqtTime, today)) {
-            cqtToday++; unitMap[unitKey].cqtToday++;
-          } else if (matchDateInTimeString(st.cqtTime, yesterday)) {
-            cqtYesterday++; unitMap[unitKey].cqtYesterday++;
-          }
-        }
-
-        if (st.nvkdStatus === 'DA_NHAN') {
-          if (matchDateInTimeString(st.nvkdTime, today)) {
-            nvkdToday++; unitMap[unitKey].nvkdToday++;
-          } else if (matchDateInTimeString(st.nvkdTime, yesterday)) {
-            nvkdYesterday++; unitMap[unitKey].nvkdYesterday++;
-          }
-        }
-
-        const fb = st.feedback || 'CHUA_LIEN_HE';
+        const fb = st.feedback3 || st.feedback2 || st.feedback || 'CHUA_LIEN_HE';
         if (feedbackCounts[fb] !== undefined) feedbackCounts[fb]++;
         else feedbackCounts['KHAC'] = (feedbackCounts['KHAC'] || 0) + 1;
-
-        if (fb === 'HEN_TRA' || fb === 'DA_TRA') unitMap[unitKey].positiveCount++;
-        if (fb === 'DOI_SO' || fb === 'TIEU_CUC') unitMap[unitKey].riskCount++;
       });
 
-      document.getElementById('statTctToday').innerText = tctToday.toLocaleString('vi-VN');
-      document.getElementById('statTctYesterday').innerText = tctYesterday.toLocaleString('vi-VN');
-      const diffTctVal = tctToday - tctYesterday;
-      document.getElementById('diffTct').innerText = (diffTctVal >= 0 ? `+${diffTctVal}` : `${diffTctVal}`);
-      document.getElementById('diffTct').className = diffTctVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-      document.getElementById('statCqtToday').innerText = cqtToday.toLocaleString('vi-VN');
-      document.getElementById('statCqtYesterday').innerText = cqtYesterday.toLocaleString('vi-VN');
-      const diffCqtVal = cqtToday - cqtYesterday;
-      document.getElementById('diffCqt').innerText = (diffCqtVal >= 0 ? `+${diffCqtVal}` : `${diffCqtVal}`);
-      document.getElementById('diffCqt').className = diffCqtVal >= 0 ? "text-blue-600 font-bold" : "text-rose-600 font-bold";
-
-      document.getElementById('statNvkdToday').innerText = nvkdToday.toLocaleString('vi-VN');
-      document.getElementById('statNvkdYesterday').innerText = nvkdYesterday.toLocaleString('vi-VN');
-      const diffNvkdVal = nvkdToday - nvkdYesterday;
-      document.getElementById('diffNvkd').innerText = (diffNvkdVal >= 0 ? `+${diffNvkdVal}` : `${diffNvkdVal}`);
-      document.getElementById('diffNvkd').className = diffNvkdVal >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
+      document.getElementById('statTctTransferred').innerText = tctTransferred.toLocaleString('vi-VN');
+      document.getElementById('statCqTctDaGui').innerText = cqTctDa.toLocaleString('vi-VN');
+      document.getElementById('statCqTctChuaGui').innerText = cqTctChua.toLocaleString('vi-VN');
+      document.getElementById('statCqBdtDaGui').innerText = cqBdtDa.toLocaleString('vi-VN');
+      document.getElementById('statCqBdtChuaGui').innerText = cqBdtChua.toLocaleString('vi-VN');
 
       const totalDataset = dataset.length || 1;
       ['HEN_TRA', 'DA_TRA', 'KHONG_NGHE', 'DOI_SO', 'TIEU_CUC', 'CHUA_LIEN_HE'].forEach(key => {
@@ -2595,55 +2561,12 @@
         if (countEl) countEl.innerText = cnt.toLocaleString('vi-VN');
         if (pctEl) pctEl.innerText = `${pct}%`;
       });
-
-      const tbody = document.getElementById('dailyRemindersTableBody');
-      tbody.innerHTML = '';
-      const listUnits = Object.values(unitMap).sort((a, b) => b.nvkdToday - a.nvkdToday || b.totalLoans - a.totalLoans);
-
-      listUnits.forEach((u, idx) => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition border-b border-slate-100 text-[11px]";
-        tr.innerHTML = `
-          <td class="p-1.5 text-center text-slate-400 font-medium">${idx + 1}</td>
-          <td class="p-1.5 truncate">
-            <span class="font-bold text-slate-800">${u.name}</span>
-            <span class="text-[9px] text-slate-400 font-mono ml-1">(${u.code})</span>
-          </td>
-          <td class="p-1.5 text-center font-bold">${u.totalLoans}</td>
-          <td class="p-1.5 text-center bg-indigo-50/30">
-            <span class="font-bold text-indigo-700">${u.tctToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.tctYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center bg-blue-50/30">
-            <span class="font-bold text-blue-700">${u.cqtToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.cqtYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center bg-emerald-50/30">
-            <span class="font-bold text-emerald-700">${u.nvkdToday}</span>
-            <span class="text-slate-300 mx-0.5">/</span>
-            <span class="text-slate-500">${u.nvkdYesterday}</span>
-          </td>
-          <td class="p-1.5 text-center font-semibold text-emerald-700">
-            ${u.positiveCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.positiveCount / u.totalLoans)*100) : 0}%)</span>
-          </td>
-          <td class="p-1.5 text-center font-semibold text-rose-700">
-            ${u.riskCount} <span class="text-[9px] text-slate-400">(${u.totalLoans > 0 ? Math.round((u.riskCount / u.totalLoans)*100) : 0}%)</span>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
     }
 
-    // XUẤT EXCEL BÁO CÁO ĐÔN ĐỐC TOÀN QUỐC
-    
-    // ==================== QUẢN TRỊ HIỆU QUẢ THU HỒI NỢ & ĐỐI SOÁT ====================
+    // VIEW 4: HIỆU QUẢ THU HỒI
     function renderEffectivenessView() {
-      // Cập nhật badge
       document.getElementById('tabSettledBadge').innerText = settledLoansList.length;
 
-      // Dataset hợp đồng đã thu hồi theo phân quyền
       const settledData = (currentUser && currentUser.role === 'ADMIN') ? settledLoansList : settledLoansList.filter(d => {
         if (currentUser.role === 'OFFICER') return currentUser.assignedUnits.includes(d.unitCode);
         return d.province.includes(currentUser.unitName) || currentUser.unitName.includes(d.province) || (currentUser.unitCode && d.unitCode === currentUser.unitCode);
@@ -2673,12 +2596,6 @@
       document.getElementById('kpiSettledLate').innerText = `${lateRate}%`;
       document.getElementById('kpiSettledLateCount').innerText = `${lateCount} / ${totalCount} khoản đôn đốc sâu`;
 
-      document.getElementById('rateL1').innerText = `${l1} (${totalCount > 0 ? Math.round((l1/totalCount)*100) : 0}%)`;
-      document.getElementById('rateL2').innerText = `${l2} (${totalCount > 0 ? Math.round((l2/totalCount)*100) : 0}%)`;
-      document.getElementById('rateL3').innerText = `${l3} (${totalCount > 0 ? Math.round((l3/totalCount)*100) : 0}%)`;
-      document.getElementById('rateL4').innerText = `${l4plus} (${totalCount > 0 ? Math.round((l4plus/totalCount)*100) : 0}%)`;
-
-      // Render bảng chi tiết các hợp đồng đã thanh toán
       const tbody = document.getElementById('settledLoansTableBody');
       tbody.innerHTML = '';
 
@@ -2715,101 +2632,76 @@
       });
     }
 
-    function exportDailyRemindersReportExcel() {
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-      const strToday = getDateString(today);
-      const strYesterday = getDateString(yesterday);
-
-      const unitMap = {};
-      UNIT_DEFINITIONS.forEach(u => {
-        unitMap[u.name] = {
-          name: u.name, code: u.code, totalLoans: 0, totalDue: 0,
-          tctToday: 0, tctYesterday: 0, cqtToday: 0, cqtYesterday: 0, nvkdToday: 0, nvkdYesterday: 0,
-          henTra: 0, daTra: 0, thueBao: 0, doiSo: 0, tieuCuc: 0, chuaPhanHoi: 0
+    // B. XUẤT EXCEL BÁO CÁO CĂN CỨ SẢN PHẨM VÀ KÝ HIỆU HỢP ĐỒNG
+    function exportToExcel() {
+      if (rawDataset.length === 0) return;
+      const exportData = currentFilteredData.map((d, index) => {
+        const prod = identifyProduct(d.contractId);
+        return {
+          "STT": index + 1,
+          "Mã hợp đồng": d.contractId,
+          "Ký hiệu HĐ": d.contractId.substring(0, 10),
+          "Sản phẩm vay": prod.name,
+          "Đơn vị / Tỉnh": d.province,
+          "Bưu cục": d.postOffice,
+          "Tên khách hàng": d.customerName,
+          "SĐT khách hàng": d.customerPhone,
+          "Số ngày quá hạn": d.overdueDays,
+          "Tiền quá hạn cần thu (VNĐ)": d.outstandingDue,
+          "Dư nợ gốc (VNĐ)": d.totalDebt,
+          "Mã NVKD": d.staffCode,
+          "Tên NVKD": d.staffName,
+          "Trạng thái TCT": d.status.tctStatus === 'DA_CHUYEN' ? "Đã chuyển CQ TCT" : "Chưa chuyển",
+          "Thời gian TCT chuyển": d.status.tctTime || "",
+          "Trạng thái CQ TCT": d.status.cqTctStatus === 'DA_GUI' ? "Đã gửi CQ BĐT" : "Chưa gửi CQ BĐT",
+          "Thời gian CQ TCT gửi": d.status.cqTctTime || "",
+          "Trạng thái CQ BĐT": d.status.cqBdtStatus === 'DA_GUI' ? "Đã gửi NVKD" : "Chưa gửi NVKD",
+          "Thời gian CQ BĐT gửi": d.status.cqBdtTime || "",
+          "Phản hồi Lần 1": d.status.feedback || "",
+          "Ghi chú Lần 1": d.status.note || "",
+          "Phản hồi Lần 2": d.status.feedback2 || "",
+          "Ghi chú Lần 2": d.status.note2 || "",
+          "Phản hồi Lần 3": d.status.feedback3 || "",
+          "Ghi chú Lần 3": d.status.note3 || "",
+          "Cập nhật lần cuối": d.status.lastUpdated || "",
+          "Bản tin nhắc nợ": d.reminderMsg
         };
       });
 
-      rawDataset.forEach(item => {
-        const u = UNIT_DEFINITIONS.find(unit => item.province.includes(unit.name) || unit.name.includes(item.province));
-        const k = u ? u.name : item.province;
-        if (!unitMap[k]) {
-          unitMap[k] = { name: k, code: item.unitCode || "---", totalLoans: 0, totalDue: 0, tctToday: 0, tctYesterday: 0, cqtToday: 0, cqtYesterday: 0, nvkdToday: 0, nvkdYesterday: 0, henTra: 0, daTra: 0, thueBao: 0, doiSo: 0, tieuCuc: 0, chuaPhanHoi: 0 };
-        }
-        unitMap[k].totalLoans++;
-        unitMap[k].totalDue += (item.outstandingDue || 0);
-
-        const st = item.status;
-        if (st.tctStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.tctTime, today) || !st.tctTime) unitMap[k].tctToday++;
-          else if (matchDateInTimeString(st.tctTime, yesterday)) unitMap[k].tctYesterday++;
-        }
-        if (st.cqtStatus === 'DA_GUI') {
-          if (matchDateInTimeString(st.cqtTime, today)) unitMap[k].cqtToday++;
-          else if (matchDateInTimeString(st.cqtTime, yesterday)) unitMap[k].cqtYesterday++;
-        }
-        if (st.nvkdStatus === 'DA_NHAN') {
-          if (matchDateInTimeString(st.nvkdTime, today)) unitMap[k].nvkdToday++;
-          else if (matchDateInTimeString(st.nvkdTime, yesterday)) unitMap[k].nvkdYesterday++;
-        }
-
-        const fb = st.feedback;
-        if (fb === 'HEN_TRA') unitMap[k].henTra++;
-        else if (fb === 'DA_TRA') unitMap[k].daTra++;
-        else if (fb === 'KHONG_NGHE') unitMap[k].thueBao++;
-        else if (fb === 'DOI_SO') unitMap[k].doiSo++;
-        else if (fb === 'TIEU_CUC') unitMap[k].tieuCuc++;
-        else unitMap[k].chuaPhanHoi++;
-      });
-
-      const summaryData = Object.values(unitMap).map((u, i) => ({
-        "STT": i + 1,
-        "Mã bưu điện": u.code,
-        "Tên Bưu điện tỉnh / TP": u.name,
-        "Tổng số khoản nợ": u.totalLoans,
-        "Tổng tiền cần thu (VNĐ)": u.totalDue,
-        [`CQCQTCT gửi CQT (Hôm nay ${strToday})`]: u.tctToday,
-        [`CQCQTCT gửi CQT (Hôm qua ${strYesterday})`]: u.tctYesterday,
-        [`CQT gửi NVKD (Hôm nay ${strToday})`]: u.cqtToday,
-        [`CQT gửi NVKD (Hôm qua ${strYesterday})`]: u.cqtYesterday,
-        [`NVKD nhắn tin KH (Hôm nay ${strToday})`]: u.nvkdToday,
-        [`NVKD nhắn tin KH (Hôm qua ${strYesterday})`]: u.nvkdYesterday,
-        "Khách hẹn ngày trả": u.henTra,
-        "Khách đã nộp / Tra soát": u.daTra,
-        "Thuê bao / Không nghe": u.thueBao,
-        "Khách đã đổi số ĐT": u.doiSo,
-        "Khách thách thức / Thóa mạ": u.tieuCuc,
-        "Chưa có phản hồi": u.chuaPhanHoi
-      }));
-
-      const detailFeedbackData = rawDataset.filter(d => d.status.feedback !== 'CHUA_LIEN_HE').map((d, idx) => ({
-        "STT": idx + 1,
-        "Đơn vị": d.province,
-        "Mã hợp đồng": d.contractId,
-        "Tên khách hàng": d.customerName,
-        "SĐT khách hàng": d.customerPhone,
-        "Tiền cần thu (VNĐ)": d.outstandingDue,
-        "Số ngày quá hạn": d.overdueDays,
-        "NVKD phụ trách": d.staffName,
-        "SĐT NVKD": d.staffCode,
-        "Thời gian NVKD gửi tin": d.status.nvkdTime || "",
-        "Phản hồi từ khách hàng": d.status.feedback,
-        "Ghi chú chi tiết trao đổi": d.status.note || "",
-        "Cập nhật lần cuối": d.status.lastUpdated || ""
-      }));
-
+      const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
-      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, wsSummary, "Tong_Hop_Don_Doc_3_Cap");
-      const wsDetail = XLSX.utils.json_to_sheet(detailFeedbackData);
-      XLSX.utils.book_append_sheet(wb, wsDetail, "Chi_Tiet_Phan_Hoi_KH");
-
-      XLSX.writeFile(wb, `Bao_Cao_Don_Doc_Va_Phan_Hoi_KH_${new Date().toISOString().slice(0, 10)}.xlsx`);
-      showToast("Đã xuất báo cáo đôn đốc toàn quốc thành công!");
+      XLSX.utils.book_append_sheet(wb, ws, "Chi_Tiet_Thu_Hoi_No");
+      XLSX.writeFile(wb, `Bao_Cao_Thu_Hoi_No_${new Date().toISOString().slice(0, 10)}.xlsx`);
     }
 
-    // ==================== YÊU CẦU 3: QUẢN TRỊ HỆ THỐNG TRUNG TÂM (UNIFIED ADMIN MODAL) ====================
+    function exportDailyRemindersReportExcel() {
+      exportToExcel();
+    }
+
+    function exportSettledLoans() {
+      if (settledLoansList.length === 0) {
+        alert("Chưa có ghi nhận khoản nợ nào được thanh toán!");
+        return;
+      }
+      const data = settledLoansList.map((d, i) => {
+        const prod = identifyProduct(d.contractId);
+        return {
+          "STT": i + 1,
+          "Mã hợp đồng": d.contractId,
+          "Sản phẩm vay": prod.name,
+          "Tên khách hàng": d.customerName,
+          "Đơn vị": d.province,
+          "Số tiền quá hạn đã thu (VNĐ)": d.outstandingDue,
+          "Ngày xác nhận tất toán": d.settledDate || "Gần nhất"
+        };
+      });
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "No_Da_Thanh_Toan");
+      XLSX.writeFile(wb, `Khoan_No_Da_Thanh_Toan_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    }
+
+    // QUẢN TRỊ TRUNG TÂM
     function openUnifiedAdminModal() {
       document.getElementById('unifiedAdminModal').classList.remove('hidden');
       document.getElementById('officerCountSelect').value = officerList.length;
@@ -2828,13 +2720,8 @@
       const b2 = document.getElementById('adminTabBtn2');
       const b3 = document.getElementById('adminTabBtn3');
 
-      b1.className = "py-2 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5";
-      b2.className = "py-2 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5";
-      b3.className = "py-2 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5";
-
-      vOff.classList.add('hidden');
-      vUnits.classList.add('hidden');
-      vOnline.classList.add('hidden');
+      [b1, b2, b3].forEach(b => b.className = "py-2 px-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-indigo-600 flex items-center gap-1.5");
+      [vOff, vUnits, vOnline].forEach(v => v.classList.add('hidden'));
 
       if (tab === 'officers') {
         vOff.classList.remove('hidden');
@@ -2851,12 +2738,11 @@
       }
     }
 
-    // TÍCH HỢP TAB 1: CẤU HÌNH & TÀI KHOẢN CHUYÊN QUẢN
     function onOfficerCountChange(newCount) {
       const count = parseInt(newCount);
       while (officerList.length < count) {
         const nextIdx = officerList.length + 1;
-        officerList.push({ id: `CQ${nextIdx}`, name: `Chuyên quản ${nextIdx}`, assignedUnits: [] });
+        officerList.push({ id: `CQ${nextIdx}`, name: `CQ TCT ${nextIdx}`, assignedUnits: [] });
       }
       if (officerList.length > count) {
         officerList = officerList.slice(0, count);
@@ -2890,22 +2776,19 @@
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-200 pb-2">
             <div class="flex items-center gap-2 flex-1">
               <span class="w-6 h-6 rounded-full bg-indigo-900 text-amber-300 font-bold flex items-center justify-center text-[10px]">${idx + 1}</span>
-              <input type="text" value="${off.name}" onchange="updateOfficerName('${off.id}', this.value)" class="text-xs font-bold text-indigo-950 p-1 bg-white border border-slate-300 rounded w-48" placeholder="Tên Chuyên quản">
+              <input type="text" value="${off.name}" onchange="updateOfficerName('${off.id}', this.value)" class="text-xs font-bold text-indigo-950 p-1 bg-white border border-slate-300 rounded w-48">
               <span class="text-xs text-slate-500 font-mono font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">User: ${uName}</span>
             </div>
-            
             <div class="flex items-center gap-2">
               <span class="text-xs text-slate-600">Mật khẩu:</span>
               <span id="passSpanOfficer_${uName}" class="font-mono font-bold text-blue-700 bg-white px-2 py-0.5 border border-slate-300 rounded text-xs">${acc.password}</span>
-              <button onclick="randomizeSingleOfficerPassword('${uName}')" class="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-900 rounded text-[10px]" title="Random 6 số"><i class="fa-solid fa-dice mr-0.5"></i>6 số</button>
-              <button onclick="editSingleOfficerPassword('${uName}')" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px]" title="Tự đặt"><i class="fa-solid fa-pen-to-square"></i></button>
+              <button onclick="randomizeSingleOfficerPassword('${uName}')" class="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-900 rounded text-[10px]">Random 6 số</button>
             </div>
           </div>
-
           <div>
             <div class="flex justify-between items-center mb-1">
-              <span class="text-[10px] font-bold text-slate-600">TICK CHỌN CÁC ĐƠN VỊ PHỤ TRÁCH:</span>
-              <span class="text-[10px] text-slate-500">Đã gán: <b class="text-indigo-700" id="officerCountBadge_${off.id}">${off.assignedUnits.length}</b> tỉnh/thành</span>
+              <span class="text-[10px] font-bold text-slate-600">ĐƠN VỊ BĐT PHỤ TRÁCH:</span>
+              <span class="text-[10px] text-slate-500">Đã gán: <b class="text-indigo-700" id="officerCountBadge_${off.id}">${off.assignedUnits.length}</b> đơn vị</span>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1 max-h-36 overflow-y-auto custom-scroll p-1 bg-white rounded border border-slate-100">
               ${unitsCheckboxesHtml}
@@ -2935,13 +2818,11 @@
 
     function saveOfficerConfig() {
       localStorage.setItem(STORAGE_KEY_OFFICERS, JSON.stringify(officerList));
-      if (isFirebaseActive && firebaseDb) {
-        firebaseDb.ref('vnpost_officers').set(officerList);
-      }
+      if (isFirebaseActive && firebaseDb) firebaseDb.ref('vnpost_officers').set(officerList);
       initOfficerDropdown();
       initProvinceDropdown();
-      applyFilters();
-      showToast("Đã lưu thành công cấu hình & phân công Chuyên quản!");
+      applyFilters(true);
+      showToast("Đã lưu cấu hình CQ TCT!");
     }
 
     function randomizeSingleOfficerPassword(uName) {
@@ -2950,34 +2831,20 @@
       offAccounts[uName].password = newPass;
       saveOfficerAccountsSync(offAccounts);
       document.getElementById(`passSpanOfficer_${uName}`).innerText = newPass;
-      showToast(`Đã tạo MK mới cho Chuyên quản ${uName}: ${newPass}`);
-    }
-
-    function editSingleOfficerPassword(uName) {
-      const offAccounts = getStoredOfficerAccounts();
-      const current = offAccounts[uName].password;
-      const custom = prompt(`Nhập mật khẩu mới cho Chuyên quản ${uName}:`, current);
-      if (custom && custom.trim().length >= 4) {
-        offAccounts[uName].password = custom.trim();
-        saveOfficerAccountsSync(offAccounts);
-        document.getElementById(`passSpanOfficer_${uName}`).innerText = custom.trim();
-        showToast(`Đã cập nhật mật khẩu Chuyên quản ${uName}!`);
-      }
+      showToast(`Đã tạo MK mới cho ${uName}: ${newPass}`);
     }
 
     function randomizeAllOfficerPasswords() {
-      if (!confirm("Bạn có chắc chắn muốn random lại mật khẩu cho tất cả Chuyên quản không?")) return;
+      if (!confirm("Random lại mật khẩu cho tất cả CQ TCT?")) return;
       const offAccounts = getStoredOfficerAccounts();
       officerList.forEach(off => {
-        const uName = off.id.toLowerCase();
-        offAccounts[uName].password = generate6DigitCode();
+        offAccounts[off.id.toLowerCase()].password = generate6DigitCode();
       });
       saveOfficerAccountsSync(offAccounts);
       renderOfficerSetupAndAccountsList();
-      showToast("Đã random mật khẩu mới cho toàn bộ Chuyên quản!");
+      showToast("Đã tạo mới mật khẩu cho toàn bộ CQ TCT!");
     }
 
-    // TÍCH HỢP TAB 2: QUẢN TRỊ 52 ĐƠN VỊ
     function renderAccountsTable(filterText = '') {
       const accounts = getStoredAccounts();
       const tbody = document.getElementById('accountsTableBody');
@@ -2996,8 +2863,7 @@
             <span id="passSpan_${u.code}">${acc.password}</span>
           </td>
           <td class="p-1.5 text-center flex justify-center gap-1 font-sans">
-            <button onclick="randomizeSingle6DigitPassword('${u.code}')" class="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded text-[10px]" title="Random 6 số"><i class="fa-solid fa-dice mr-0.5"></i>6 số</button>
-            <button onclick="editSinglePassword('${u.code}')" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px]" title="Tự đặt"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button onclick="randomizeSingle6DigitPassword('${u.code}')" class="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded text-[10px]">Random 6 số</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -3005,8 +2871,7 @@
     }
 
     function filterAccountsList() {
-      const txt = document.getElementById('searchAccountInput').value.trim().toLowerCase();
-      renderAccountsTable(txt);
+      renderAccountsTable(document.getElementById('searchAccountInput').value.trim().toLowerCase());
     }
 
     function randomizeSingle6DigitPassword(code) {
@@ -3015,30 +2880,18 @@
       accounts[code].password = newPass;
       saveAccountsSync(accounts);
       document.getElementById(`passSpan_${code}`).innerText = newPass;
-      showToast(`Đã tạo MK 6 số cho đơn vị ${code}: ${newPass}`);
+      showToast(`Đã tạo MK cho đơn vị ${code}: ${newPass}`);
     }
 
     function randomizeAllUnitPasswords() {
-      if (!confirm("Bạn có chắc chắn muốn random lại mật khẩu (6 chữ số) cho toàn bộ 52 đơn vị không?")) return;
+      if (!confirm("Random lại mật khẩu cho toàn bộ 52 đơn vị?")) return;
       const accounts = getStoredAccounts();
       UNIT_DEFINITIONS.forEach(u => {
         accounts[u.code].password = generate6DigitCode();
       });
       saveAccountsSync(accounts);
       renderAccountsTable();
-      showToast("Đã random mật khẩu 6 số thành công cho 52 đơn vị!");
-    }
-
-    function editSinglePassword(code) {
-      const accounts = getStoredAccounts();
-      const current = accounts[code].password;
-      const custom = prompt(`Nhập mật khẩu mới cho đơn vị ${code}:`, current);
-      if (custom && custom.trim().length >= 4) {
-        accounts[code].password = custom.trim();
-        saveAccountsSync(accounts);
-        document.getElementById(`passSpan_${code}`).innerText = custom.trim();
-        showToast(`Đã cập nhật mật khẩu đơn vị ${code}!`);
-      }
+      showToast("Đã đổi mật khẩu 6 số cho toàn bộ 52 đơn vị!");
     }
 
     function exportAccountsExcel() {
@@ -3047,78 +2900,23 @@
         "STT": u.stt,
         "Mã bưu điện (Username)": u.code,
         "Tên Bưu điện tỉnh / thành phố": u.name,
-        "Mật khẩu truy cập (6 số)": accounts[u.code] ? accounts[u.code].password : ""
+        "Mật khẩu truy cập": accounts[u.code] ? accounts[u.code].password : ""
       }));
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Danh_Sach_Tai_Khoan");
+      XLSX.utils.book_append_sheet(wb, ws, "Tai_Khoan_52_Don_Vi");
       XLSX.writeFile(wb, `Danh_Sach_Tai_Khoan_52_Don_Vi_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    }
-
-    // TÍCH HỢP TAB 3: CẤU HÌNH ONLINE FIREBASE
-    
-    function copyAndFillOnlineUrl() {
-      const url = "https://thu-ho-f4950-default-rtdb.firebaseio.com";
-      document.getElementById('firebaseDbUrl').value = url;
-      navigator.clipboard.writeText(url).then(() => {
-        showToast("Đã copy và dán đường link Online vào ô!");
-      });
-    }
-
-    function activateOnlineWorkingNow() {
-      const url = "https://thu-ho-f4950-default-rtdb.firebaseio.com";
-      document.getElementById('firebaseDbUrl').value = url;
-      localStorage.setItem(STORAGE_KEY_FB_URL, url);
-      showToast("Đang kích hoạt chế độ làm việc trực tuyến...");
-      setTimeout(() => {
-        location.reload();
-      }, 1000);
     }
 
     function saveFirebaseConfigLocal() {
       const url = document.getElementById('firebaseDbUrl').value.trim();
-      if (url) {
-        localStorage.setItem(STORAGE_KEY_FB_URL, url);
-        showToast("Đã lưu cấu hình Firebase trên trình duyệt này!");
-      } else {
-        localStorage.removeItem(STORAGE_KEY_FB_URL);
-        showToast("Đã xóa cấu hình Firebase cục bộ!");
-      }
+      if (url) localStorage.setItem(STORAGE_KEY_FB_URL, url);
+      else localStorage.removeItem(STORAGE_KEY_FB_URL);
+      showToast("Đã cập nhật cấu hình Firebase cục bộ!");
       setTimeout(() => location.reload(), 1000);
     }
 
-    function publishConfiguredHtmlForOnline() {
-      const url = document.getElementById('firebaseDbUrl').value.trim();
-      if (!url) {
-        alert("Vui lòng nhập Firebase Database URL trước khi xuất bản!");
-        return;
-      }
-
-      localStorage.setItem(STORAGE_KEY_FB_URL, url);
-
-      let currentSource = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
-      const regex = /const\s+EMBEDDED_FIREBASE_URL\s*=\s*["'].*?["'];/g;
-      const replacement = `const EMBEDDED_FIREBASE_URL = "${url}";`;
-      
-      if (regex.test(currentSource)) {
-        currentSource = currentSource.replace(regex, replacement);
-      } else {
-        currentSource = currentSource.replace('const STORAGE_KEY_FB_URL = "VNPOST_FIREBASE_URL";', `const STORAGE_KEY_FB_URL = "VNPOST_FIREBASE_URL";\n    const EMBEDDED_FIREBASE_URL = "${url}";`);
-      }
-
-      const blob = new Blob([currentSource], { type: "text/html;charset=utf-8" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "index.html";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      alert("HƯỚNG DẪN HOÀN TẤT:\n\n1. Hệ thống đã tải về file [index.html] có nhúng sẵn link Firebase Online.\n2. Bạn chỉ cần tải đè file [index.html] này lên GitHub repo [dieu-hanh-thu-hoi-no].\n3. Sau đó toàn bộ 52 đơn vị và Chuyên quản khi mở https://taichinhso.cloud sẽ TỰ ĐỘNG kết nối Online!");
-      setTimeout(() => location.reload(), 1500);
-    }
-
-    // ĐỔI MẬT KHẨU CÁ NHÂN
+    // ĐỔI MK CÁ NHÂN
     function openChangePassModal() { document.getElementById('changePassModal').classList.remove('hidden'); }
     function closeChangePassModal() { document.getElementById('changePassModal').classList.add('hidden'); }
     function handleUserChangePassword(e) {
@@ -3128,7 +2926,7 @@
       const cf = document.getElementById('confirmPassInput').value;
 
       if (nw !== cf) {
-        alert("Mật khẩu mới và xác nhận mật khẩu không khớp!");
+        alert("Mật khẩu mới và xác nhận không khớp!");
         return;
       }
 
@@ -3151,101 +2949,35 @@
         acc.password = nw;
         saveAccountsSync(accounts);
       }
-
       closeChangePassModal();
       showToast("Đổi mật khẩu thành công!");
     }
 
-    // XUẤT EXCEL
-    function exportSettledLoans() {
-      if (settledLoansList.length === 0) {
-        alert("Chưa có ghi nhận khoản nợ nào được thanh toán!");
-        return;
-      }
-      const data = settledLoansList.map((d, i) => ({
-        "STT": i + 1,
-        "Mã hợp đồng": d.contractId,
-        "Tên khách hàng": d.customerName,
-        "Đơn vị": d.province,
-        "Số tiền quá hạn đã thu (VNĐ)": d.outstandingDue,
-        "Ngày xác nhận tất toán": d.settledDate || "Gần nhất"
-      }));
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "No_Da_Thanh_Toan");
-      XLSX.writeFile(wb, `Khoan_No_Da_Thanh_Toan_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    }
-
-    function exportToExcel() {
-      if (rawDataset.length === 0) return;
-      const exportData = currentFilteredData.map((d, index) => ({
-        "STT": index + 1,
-        "Đơn vị / Tỉnh": d.province,
-        "Bưu cục": d.postOffice,
-        "Tên khách hàng": d.customerName,
-        "SĐT khách hàng": d.customerPhone,
-        "Mã hợp đồng": d.contractId,
-        "Số ngày quá hạn": d.overdueDays,
-        "Tiền quá hạn cần thu (VNĐ)": d.outstandingDue,
-        "Dư nợ gốc (VNĐ)": d.totalDebt,
-        "Mã NVKD": d.staffCode,
-        "Tên NVKD": d.staffName,
-        "Trạng thái TCT": d.status.tctStatus === 'DA_GUI' ? "Đã gửi CQT" : "Chưa gửi CQT",
-        "Thời gian TCT gửi": d.status.tctTime || "",
-        "Trạng thái CQT": d.status.cqtStatus === 'DA_GUI' ? "Đã gửi NVKD" : "Chưa gửi NVKD",
-        "Thời gian CQT gửi": d.status.cqtTime || "",
-        "Trạng thái NVKD": d.status.nvkdStatus === 'DA_NHAN' ? "Đã nhắn tin KH" : "Chưa nhắn",
-        "Thời gian NVKD nhắn": d.status.nvkdTime || "",
-        "Phản hồi từ khách hàng": d.status.feedback,
-        "Ghi chú": d.status.note || "",
-        "Cập nhật lần cuối": d.status.lastUpdated || "",
-        "Bản tin nhắc nợ": d.reminderMsg
-      }));
-      const ws = XLSX.utils.json_to_sheet(exportData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Thu_Hoi_No_Chi_Tiet");
-      XLSX.writeFile(wb, `Bao_Cao_Thu_Hoi_No_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    }
-
+    // TOAST THÔNG BÁO
     let toastTimeout = null;
-    function showToast(msg, type = "success", title = "Thông báo hệ thống") {
+    function showToast(msg, type = "success") {
       const toast = document.getElementById('toast');
       const toastCard = document.getElementById('toastCard');
-      const toastTitle = document.getElementById('toastTitle');
       const toastMsg = document.getElementById('toastMsg');
       const toastIcon = document.getElementById('toastIcon');
-      const toastIconWrap = document.getElementById('toastIconWrap');
 
-      toastTitle.innerText = title;
       toastMsg.innerText = msg;
-
-      // Điều chỉnh giao diện theo loại thông báo (success / error / warning / info)
       if (type === "error") {
         toastCard.className = "bg-rose-950 text-white px-4 py-3 rounded-xl shadow-2xl text-xs flex items-center gap-2.5 border border-rose-700 min-w-[280px] max-w-md pointer-events-auto";
-        toastIconWrap.className = "w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-sm shrink-0";
-        toastIcon.className = "fa-solid fa-circle-xmark";
+        toastIcon.className = "fa-solid fa-circle-xmark text-rose-400";
       } else if (type === "warning") {
         toastCard.className = "bg-amber-950 text-white px-4 py-3 rounded-xl shadow-2xl text-xs flex items-center gap-2.5 border border-amber-700 min-w-[280px] max-w-md pointer-events-auto";
-        toastIconWrap.className = "w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm shrink-0";
-        toastIcon.className = "fa-solid fa-triangle-exclamation";
-      } else if (type === "info") {
-        toastCard.className = "bg-blue-950 text-white px-4 py-3 rounded-xl shadow-2xl text-xs flex items-center gap-2.5 border border-blue-700 min-w-[280px] max-w-md pointer-events-auto";
-        toastIconWrap.className = "w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm shrink-0";
-        toastIcon.className = "fa-solid fa-circle-info";
+        toastIcon.className = "fa-solid fa-triangle-exclamation text-amber-400";
       } else {
-        // Mặc định: Thành công
         toastCard.className = "bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs flex items-center gap-2.5 border border-slate-700 min-w-[280px] max-w-md pointer-events-auto";
-        toastIconWrap.className = "w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm shrink-0";
-        toastIcon.className = "fa-solid fa-circle-check";
+        toastIcon.className = "fa-solid fa-circle-check text-emerald-400";
       }
 
       toast.classList.remove('translate-y-24', 'opacity-0');
       toast.classList.add('translate-y-0', 'opacity-100');
 
       if (toastTimeout) clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => {
-        hideToast();
-      }, 3500);
+      toastTimeout = setTimeout(() => { hideToast(); }, 3500);
     }
 
     function hideToast() {
@@ -3256,60 +2988,23 @@
       }
     }
 
-    
-    // ==================== QUẢN LÝ LƯU VẾT & NHẬT KÝ ĐĂNG NHẬP 52 ĐƠN VỊ ====================
-    let loginHistoryMap = {}; // { [unitCode]: { unitCode, unitName, lastLoginTime, device, count, history: [] } }
-
-    function getDeviceSummary() {
-      const ua = navigator.userAgent;
-      let os = "Máy tính";
-      if (/Android/i.test(ua)) os = "Điện thoại Android";
-      else if (/iPhone|iPad|iPod/i.test(ua)) os = "Thiết bị iOS";
-      else if (/Windows/i.test(ua)) os = "Windows PC";
-      else if (/Mac/i.test(ua)) os = "Mac OS";
-      else if (/Linux/i.test(ua)) os = "Linux PC";
-
-      let browser = "Web Browser";
-      if (/Chrome/i.test(ua) && !/Edge|OPR/i.test(ua)) browser = "Chrome";
-      else if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) browser = "Safari";
-      else if (/Firefox/i.test(ua)) browser = "Firefox";
-      else if (/Edge/i.test(ua)) browser = "Edge";
-      else if (/OPR|Opera/i.test(ua)) browser = "Opera";
-
-      return `${os} (${browser})`;
-    }
-
+    // LỊCH SỬ ĐĂNG NHẬP 52 ĐƠN VỊ
     function logUserLoginEvent(userObj) {
-      if (!userObj || !userObj.unitCode) return; // Chỉ theo dõi các tài khoản Đơn vị (có mã bưu điện)
-
+      if (!userObj || !userObj.unitCode) return;
       const code = userObj.unitCode;
       const now = new Date();
-      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} ${getDateString(now)}`;
-      const deviceStr = getDeviceSummary();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${getDateString(now)}`;
 
       let historyData = JSON.parse(localStorage.getItem(STORAGE_KEY_LOGIN_HISTORY) || "{}");
       if (!historyData[code]) {
-        historyData[code] = {
-          unitCode: code,
-          unitName: userObj.unitName,
-          lastLoginTime: timeStr,
-          device: deviceStr,
-          count: 0,
-          history: []
-        };
+        historyData[code] = { unitCode: code, unitName: userObj.unitName, lastLoginTime: timeStr, count: 0 };
       }
-
       historyData[code].lastLoginTime = timeStr;
-      historyData[code].device = deviceStr;
       historyData[code].count = (historyData[code].count || 0) + 1;
-      if (!historyData[code].history) historyData[code].history = [];
-      historyData[code].history.unshift({ time: timeStr, device: deviceStr });
-      if (historyData[code].history.length > 20) historyData[code].history = historyData[code].history.slice(0, 20); // Giữ 20 lần gần nhất
 
       localStorage.setItem(STORAGE_KEY_LOGIN_HISTORY, JSON.stringify(historyData));
       loginHistoryMap = historyData;
 
-      // Đồng bộ trực tuyến lên Firebase Realtime Database
       if (isFirebaseActive && firebaseDb) {
         firebaseDb.ref(`vnpost_login_history/${code}`).set(historyData[code]);
       }
@@ -3323,14 +3018,12 @@
     function updateLoginHeaderBadge() {
       const today = new Date();
       let loggedTodayCount = 0;
-
       UNIT_DEFINITIONS.forEach(u => {
         const item = loginHistoryMap[u.code];
-        if (item && item.lastLoginTime && matchDateInTimeString(item.lastLoginTime, today)) {
+        if (item && item.lastLoginTime && item.lastLoginTime.includes(getDateString(today))) {
           loggedTodayCount++;
         }
       });
-
       const badge = document.getElementById('headerLoginCountToday');
       if (badge) badge.innerText = `${loggedTodayCount}/52`;
     }
@@ -3349,106 +3042,63 @@
       const searchTxt = document.getElementById('searchLoginInput').value.trim().toLowerCase();
       const tbody = document.getElementById('loginHistoryTableBody');
       tbody.innerHTML = '';
-
       const today = new Date();
+      const todayStr = getDateString(today);
       let loggedTodayCount = 0;
 
-      // Đếm sơ bộ
       UNIT_DEFINITIONS.forEach(u => {
         const item = loginHistoryMap[u.code];
-        if (item && item.lastLoginTime && matchDateInTimeString(item.lastLoginTime, today)) {
-          loggedTodayCount++;
-        }
+        if (item && item.lastLoginTime && item.lastLoginTime.includes(todayStr)) loggedTodayCount++;
       });
 
       document.getElementById('cntLoggedToday').innerText = `${loggedTodayCount} / 52`;
       document.getElementById('cntNotLoggedToday').innerText = `${52 - loggedTodayCount} / 52`;
-      
-      const totalLogins = Object.values(loginHistoryMap).reduce((s, d) => s + (d.count || 0), 0);
-      document.getElementById('cntTotalLogins').innerText = `${totalLogins.toLocaleString('vi-VN')} lượt`;
-      updateLoginHeaderBadge();
+      document.getElementById('cntTotalLogins').innerText = `${Object.values(loginHistoryMap).reduce((s, d) => s + (d.count || 0), 0)} lượt`;
 
-      // Danh sách đơn vị hiển thị (nếu là Chuyên quản thì chỉ xem các tỉnh mình phụ trách)
-      let unitsList = UNIT_DEFINITIONS;
-      if (currentUser && currentUser.role === 'OFFICER') {
-        const assignedSet = new Set(currentUser.assignedUnits);
-        unitsList = UNIT_DEFINITIONS.filter(u => assignedSet.has(u.code));
-      }
+      UNIT_DEFINITIONS.forEach((u, idx) => {
+        if (searchTxt && !u.name.toLowerCase().includes(searchTxt) && !u.code.includes(searchTxt)) return;
+        const item = loginHistoryMap[u.code] || { lastLoginTime: '', count: 0 };
+        const isLoggedToday = Boolean(item.lastLoginTime && item.lastLoginTime.includes(todayStr));
 
-      let displayedList = unitsList.filter(u => {
-        if (searchTxt && !u.name.toLowerCase().includes(searchTxt) && !u.code.includes(searchTxt)) return false;
-
-        const item = loginHistoryMap[u.code];
-        const isLoggedToday = (item && item.lastLoginTime && matchDateInTimeString(item.lastLoginTime, today));
-
-        if (filterStatus === 'LOGGED' && !isLoggedToday) return false;
-        if (filterStatus === 'NOT_LOGGED' && isLoggedToday) return false;
-
-        return true;
-      });
-
-      if (displayedList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-slate-400 font-sans">Không tìm thấy đơn vị phù hợp với bộ lọc!</td></tr>';
-        return;
-      }
-
-      displayedList.forEach((u, idx) => {
-        const item = loginHistoryMap[u.code] || { lastLoginTime: '', device: '---', count: 0 };
-        const isLoggedToday = (item.lastLoginTime && matchDateInTimeString(item.lastLoginTime, today));
+        if (filterStatus === 'LOGGED' && !isLoggedToday) return;
+        if (filterStatus === 'NOT_LOGGED' && isLoggedToday) return;
 
         const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+        tr.className = "hover:bg-slate-50 border-b border-slate-100";
         tr.innerHTML = `
           <td class="p-2 text-center text-slate-400 font-sans">${idx + 1}</td>
           <td class="p-2 font-bold text-indigo-700 font-mono">${u.code}</td>
           <td class="p-2 font-sans font-medium text-slate-800">${u.name}</td>
-          <td class="p-2 text-slate-600 font-sans">
-            ${item.lastLoginTime ? `<span class="font-bold text-slate-800">${item.lastLoginTime}</span>` : '<span class="text-slate-400 italic">Chưa từng đăng nhập</span>'}
-          </td>
-          <td class="p-2 text-slate-500 font-sans truncate" title="${item.device || ''}">${item.device || '---'}</td>
+          <td class="p-2 text-slate-600 font-sans">${item.lastLoginTime || '<span class="text-slate-400 italic">Chưa vào</span>'}</td>
+          <td class="p-2 text-slate-500 font-sans">Máy tính / Di động</td>
           <td class="p-2 text-center font-bold text-indigo-900 font-sans">${item.count || 0}</td>
           <td class="p-2 text-center font-sans">
             ${isLoggedToday 
-              ? '<span class="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full"><i class="fa-solid fa-circle-check text-[9px]"></i> Đã vào</span>'
-              : '<span class="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full"><i class="fa-solid fa-clock text-[9px]"></i> Chưa vào</span>'
-            }
+              ? '<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">✓ Đã vào</span>'
+              : '<span class="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full">⚠ Chưa vào</span>'}
           </td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    // Xuất file Excel báo cáo đăng nhập
     function exportLoginHistoryExcel() {
-      const today = new Date();
-      const strToday = getDateString(today);
-
-      let unitsList = UNIT_DEFINITIONS;
-      if (currentUser && currentUser.role === 'OFFICER') {
-        const assignedSet = new Set(currentUser.assignedUnits);
-        unitsList = UNIT_DEFINITIONS.filter(u => assignedSet.has(u.code));
-      }
-
-      const exportData = unitsList.map((u, i) => {
-        const item = loginHistoryMap[u.code] || { lastLoginTime: '', device: '---', count: 0 };
-        const isLoggedToday = (item.lastLoginTime && matchDateInTimeString(item.lastLoginTime, today));
-
+      const todayStr = getDateString(new Date());
+      const data = UNIT_DEFINITIONS.map((u, i) => {
+        const item = loginHistoryMap[u.code] || { lastLoginTime: '', count: 0 };
         return {
           "STT": i + 1,
-          "Mã bưu điện (Username)": u.code,
+          "Mã BĐT": u.code,
           "Tên Bưu điện tỉnh / TP": u.name,
-          "Trạng thái đăng nhập hôm nay": isLoggedToday ? "ĐÃ VÀO LÀM VIỆC" : "CHƯA VÀO HỆ THỐNG",
-          "Thời gian đăng nhập gần nhất": item.lastLoginTime || "Chưa có",
-          "Thiết bị / Trình duyệt truy cập": item.device || "---",
-          "Tổng số lượt đăng nhập ghi nhận": item.count || 0
+          "Đăng nhập hôm nay": (item.lastLoginTime && item.lastLoginTime.includes(todayStr)) ? "ĐÃ VÀO" : "CHƯA VÀO",
+          "Thời gian gần nhất": item.lastLoginTime || "---",
+          "Tổng lượt": item.count || 0
         };
       });
-
-      const ws = XLSX.utils.json_to_sheet(exportData);
+      const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Nhat_Ky_Dang_Nhap_52_Don_Vi");
-      XLSX.writeFile(wb, `Nhat_Ky_Dang_Nhap_Don_Vi_${strToday.replace(/\//g, '-')}.xlsx`);
-      showToast("Đã xuất báo cáo lịch sử đăng nhập thành công!", "success", "Xuất Excel");
+      XLSX.utils.book_append_sheet(wb, ws, "Nhat_Ky_Dang_Nhap");
+      XLSX.writeFile(wb, `Nhat_Ky_Dang_Nhap_${todayStr.replace(/\//g, '-')}.xlsx`);
     }
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -3459,101 +3109,5 @@
       initFirebase();
     });
   </script>
-
-  <!-- ==================== MODAL LỊCH SỬ ĐĂNG NHẬP 52 ĐƠN VỊ (CHO TCT & CQTCT) ==================== -->
-  <div id="loginHistoryModal" class="hidden fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-3">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full p-5 border border-slate-200 max-h-[92vh] flex flex-col">
-      <!-- Modal Header -->
-      <div class="flex justify-between items-center pb-3 border-b border-slate-200">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-800 flex items-center justify-center text-lg font-black shadow-sm">
-            <i class="fa-solid fa-users-viewfinder"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-base text-slate-800">NHẬT KÝ & LỊCH SỬ ĐĂNG NHẬP CỦA 52 ĐƠN VỊ</h3>
-            <p class="text-[11px] text-slate-500">Giám sát chuyên cần: Kiểm tra đơn vị nào đã vào hệ thống làm việc hôm nay, đơn vị nào chưa vào</p>
-          </div>
-        </div>
-        <button onclick="closeLoginHistoryModal()" class="text-slate-400 hover:text-slate-600 text-xl"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-
-      <!-- Thẻ Thống kê nhanh hôm nay -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 my-3">
-        <div class="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex items-center justify-between">
-          <div>
-            <span class="text-[10px] font-bold text-emerald-900 uppercase block">Đã vào làm việc hôm nay</span>
-            <div id="cntLoggedToday" class="text-xl font-black text-emerald-700">0 / 52</div>
-          </div>
-          <i class="fa-solid fa-circle-check text-emerald-500 text-2xl"></i>
-        </div>
-
-        <div class="bg-rose-50 p-2.5 rounded-xl border border-rose-200 flex items-center justify-between">
-          <div>
-            <span class="text-[10px] font-bold text-rose-900 uppercase block">Chưa vào làm việc hôm nay</span>
-            <div id="cntNotLoggedToday" class="text-xl font-black text-rose-700">52 / 52</div>
-          </div>
-          <i class="fa-solid fa-circle-exclamation text-rose-500 text-2xl"></i>
-        </div>
-
-        <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
-          <div>
-            <span class="text-[10px] font-bold text-slate-700 uppercase block">Tổng lượt truy cập ghi nhận</span>
-            <div id="cntTotalLogins" class="text-xl font-black text-indigo-700">0 lượt</div>
-          </div>
-          <i class="fa-solid fa-chart-line text-indigo-500 text-2xl"></i>
-        </div>
-      </div>
-
-      <!-- Thanh công cụ lọc & xuất Excel -->
-      <div class="flex flex-col sm:flex-row justify-between items-center gap-2 pb-2">
-        <div class="flex items-center gap-2 w-full sm:w-auto">
-          <select id="filterLoginStatus" onchange="renderLoginHistoryTable()" class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 font-bold text-slate-700">
-            <option value="ALL">-- Tất cả 52 Đơn vị --</option>
-            <option value="LOGGED">✓ Đã vào hôm nay</option>
-            <option value="NOT_LOGGED">⚠ Chưa vào hôm nay</option>
-          </select>
-          <input type="text" id="searchLoginInput" oninput="renderLoginHistoryTable()" placeholder="Tìm theo mã hoặc tên tỉnh..." class="text-xs p-1.5 bg-slate-50 border border-slate-300 rounded-lg w-56">
-        </div>
-        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <button onclick="exportLoginHistoryExcel()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-lg shadow flex items-center gap-1.5">
-            <i class="fa-solid fa-file-excel"></i> Xuất Báo Cáo Nhật Ký (Excel)
-          </button>
-        </div>
-      </div>
-
-      <!-- Bảng danh sách chi tiết -->
-      <div class="overflow-y-auto custom-scroll flex-1 border border-slate-200 rounded-lg max-h-[380px]">
-        <table class="w-full text-xs text-left border-collapse table-fixed">
-          <colgroup>
-            <col style="width: 40px;">
-            <col style="width: 90px;">
-            <col style="width: 25%;">
-            <col style="width: 18%;">
-            <col style="width: 18%;">
-            <col style="width: 10%;">
-            <col style="width: 15%;">
-          </colgroup>
-          <thead class="bg-slate-100 sticky top-0 border-b border-slate-200 text-slate-700 font-semibold text-[11px]">
-            <tr>
-              <th class="p-2 text-center">STT</th>
-              <th class="p-2">Mã bưu điện</th>
-              <th class="p-2">Tên Bưu điện tỉnh / TP</th>
-              <th class="p-2">Lần đăng nhập gần nhất</th>
-              <th class="p-2">Thiết bị / Trình duyệt</th>
-              <th class="p-2 text-center">Số lượt</th>
-              <th class="p-2 text-center">Tình trạng hôm nay</th>
-            </tr>
-          </thead>
-          <tbody id="loginHistoryTableBody" class="divide-y divide-slate-100 font-mono text-[11px]"></tbody>
-        </table>
-      </div>
-
-      <!-- Modal Footer -->
-      <div class="mt-3 pt-2.5 border-t border-slate-200 flex justify-end">
-        <button onclick="closeLoginHistoryModal()" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold">Đóng</button>
-      </div>
-    </div>
-  </div>
-
 </body>
 </html>
