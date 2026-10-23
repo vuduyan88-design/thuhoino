@@ -89,6 +89,11 @@
           <i class="fa-solid fa-gear text-sm"></i> Quản Trị Hệ Thống TCT
         </button>
 
+        <!-- NÚT THEO DÕI LỊCH SỬ ĐĂNG NHẬP CỦA 52 ĐƠN VỊ (CHO TCT & CQTCT) -->
+        <button id="btnLoginHistory" onclick="openLoginHistoryModal()" class="hidden text-xs bg-sky-800 hover:bg-sky-700 text-white font-bold px-2.5 py-1.5 rounded-lg border border-sky-600 items-center gap-1.5 shadow-sm transition">
+          <i class="fa-solid fa-clock-rotate-left text-amber-300"></i> Lịch Sử Đăng Nhập (<span id="headerLoginCountToday">0/52</span>)
+        </button>
+
         <button id="btnChangePass" onclick="openChangePassModal()" class="text-xs bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 px-2.5 py-1.5 rounded-lg border border-indigo-700 flex items-center gap-1 transition">
           <i class="fa-solid fa-key"></i> Đổi MK
         </button>
@@ -1071,6 +1076,7 @@
     ];
 
     const STORAGE_KEY_AUTH = "VNPOST_AUTH_ACCOUNTS_V7";
+    const STORAGE_KEY_LOGIN_HISTORY = "VNPOST_LOGIN_HISTORY_V1";
     const STORAGE_KEY_OFFICER_AUTH = "VNPOST_OFFICER_ACCOUNTS_V7";
     const STORAGE_KEY_DATA = "VNPOST_ACTIVE_DATASET_V6";
     const STORAGE_KEY_SETTLED = "VNPOST_SETTLED_LIST_V6";
@@ -1217,6 +1223,18 @@
         }
       });
 
+      firebaseDb.ref('vnpost_login_history').on('value', snapshot => {
+        const val = snapshot.val();
+        if (val) {
+          loginHistoryMap = val;
+          localStorage.setItem(STORAGE_KEY_LOGIN_HISTORY, JSON.stringify(val));
+          updateLoginHeaderBadge();
+          if (!document.getElementById('loginHistoryModal').classList.contains('hidden')) {
+            renderLoginHistoryTable();
+          }
+        }
+      });
+
       firebaseDb.ref('vnpost_loans_data').on('value', snapshot => {
         const val = snapshot.val();
         rawDataset = val ? (Array.isArray(val) ? val : Object.values(val)) : [];
@@ -1301,6 +1319,7 @@
 
     function completeLoginSuccess() {
       document.getElementById('loginScreen').classList.add('hidden');
+      logUserLoginEvent(currentUser); // Ghi nhận lưu vết lịch sử đăng nhập
       setupUserSessionView();
       showToast(`Xin chào ${currentUser.unitName}!`);
     }
@@ -1316,12 +1335,15 @@
       const colLoanRangeFilter = document.getElementById('colLoanRangeFilter');
       const bulkGroupTCT = document.getElementById('bulkGroupTCT');
       const bulkGroupUnit = document.getElementById('bulkGroupUnit');
+      const btnLoginHistory = document.getElementById('btnLoginHistory');
 
       if (currentUser.role === 'ADMIN') {
         headerTitle.innerHTML = `<b class="text-amber-400">TỔNG CÔNG TY (Layer 1)</b> | Toàn quyền điều hành toàn mạng lưới`;
         adminToolbar.classList.remove('hidden');
         btnUnifiedAdmin.classList.remove('hidden');
         btnUnifiedAdmin.classList.add('flex');
+        btnLoginHistory.classList.remove('hidden');
+        btnLoginHistory.classList.add('flex');
         officerFilter.disabled = false;
         rankSortButtons.classList.remove('hidden');
         reportRankingSubtitle.innerText = "Thống kê so sánh toàn bộ các đơn vị trên toàn mạng lưới";
@@ -1336,6 +1358,8 @@
         adminToolbar.classList.add('hidden');
         btnUnifiedAdmin.classList.add('hidden');
         btnUnifiedAdmin.classList.remove('flex');
+        btnLoginHistory.classList.remove('hidden');
+        btnLoginHistory.classList.add('flex');
         officerFilter.disabled = true;
         rankSortButtons.classList.remove('hidden');
         reportRankingSubtitle.innerText = `Thống kê trong phạm vi địa bàn chuyên quản phụ trách`;
@@ -1350,9 +1374,13 @@
         adminToolbar.classList.add('hidden');
         btnUnifiedAdmin.classList.add('hidden');
         btnUnifiedAdmin.classList.remove('flex');
+        btnLoginHistory.classList.remove('hidden');
+        btnLoginHistory.classList.add('flex');
         officerFilter.disabled = true;
         rankSortButtons.classList.add('hidden');
         reportRankingSubtitle.innerText = `Báo cáo số liệu nội bộ đơn vị ${currentUser.unitName}`;
+        btnLoginHistory.classList.add('hidden');
+        btnLoginHistory.classList.remove('flex');
         colLoanRangeFilter.classList.add('hidden');
 
         bulkGroupTCT.classList.add('hidden');
@@ -3228,12 +3256,304 @@
       }
     }
 
+    
+    // ==================== QUẢN LÝ LƯU VẾT & NHẬT KÝ ĐĂNG NHẬP 52 ĐƠN VỊ ====================
+    let loginHistoryMap = {}; // { [unitCode]: { unitCode, unitName, lastLoginTime, device, count, history: [] } }
+
+    function getDeviceSummary() {
+      const ua = navigator.userAgent;
+      let os = "Máy tính";
+      if (/Android/i.test(ua)) os = "Điện thoại Android";
+      else if (/iPhone|iPad|iPod/i.test(ua)) os = "Thiết bị iOS";
+      else if (/Windows/i.test(ua)) os = "Windows PC";
+      else if (/Mac/i.test(ua)) os = "Mac OS";
+      else if (/Linux/i.test(ua)) os = "Linux PC";
+
+      let browser = "Web Browser";
+      if (/Chrome/i.test(ua) && !/Edge|OPR/i.test(ua)) browser = "Chrome";
+      else if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) browser = "Safari";
+      else if (/Firefox/i.test(ua)) browser = "Firefox";
+      else if (/Edge/i.test(ua)) browser = "Edge";
+      else if (/OPR|Opera/i.test(ua)) browser = "Opera";
+
+      return `${os} (${browser})`;
+    }
+
+    function logUserLoginEvent(userObj) {
+      if (!userObj || !userObj.unitCode) return; // Chỉ theo dõi các tài khoản Đơn vị (có mã bưu điện)
+
+      const code = userObj.unitCode;
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} ${getDateString(now)}`;
+      const deviceStr = getDeviceSummary();
+
+      let historyData = JSON.parse(localStorage.getItem(STORAGE_KEY_LOGIN_HISTORY) || "{}");
+      if (!historyData[code]) {
+        historyData[code] = {
+          unitCode: code,
+          unitName: userObj.unitName,
+          lastLoginTime: timeStr,
+          device: deviceStr,
+          count: 0,
+          history: []
+        };
+      }
+
+      historyData[code].lastLoginTime = timeStr;
+      historyData[code].device = deviceStr;
+      historyData[code].count = (historyData[code].count || 0) + 1;
+      if (!historyData[code].history) historyData[code].history = [];
+      historyData[code].history.unshift({ time: timeStr, device: deviceStr });
+      if (historyData[code].history.length > 20) historyData[code].history = historyData[code].history.slice(0, 20); // Giữ 20 lần gần nhất
+
+      localStorage.setItem(STORAGE_KEY_LOGIN_HISTORY, JSON.stringify(historyData));
+      loginHistoryMap = historyData;
+
+      // Đồng bộ trực tuyến lên Firebase Realtime Database
+      if (isFirebaseActive && firebaseDb) {
+        firebaseDb.ref(`vnpost_login_history/${code}`).set(historyData[code]);
+      }
+    }
+
+    function initLoginHistory() {
+      loginHistoryMap = JSON.parse(localStorage.getItem(STORAGE_KEY_LOGIN_HISTORY) || "{}");
+      updateLoginHeaderBadge();
+    }
+
+    function updateLoginHeaderBadge() {
+      const today = new Date();
+      let loggedTodayCount = 0;
+
+      UNIT_DEFINITIONS.forEach(u => {
+        const item = loginHistoryMap[u.code];
+        if (item && item.lastLoginTime && matchDateInTimeString(item.lastLoginTime, today)) {
+          loggedTodayCount++;
+        }
+      });
+
+      const badge = document.getElementById('headerLoginCountToday');
+      if (badge) badge.innerText = `${loggedTodayCount}/52`;
+    }
+
+    function openLoginHistoryModal() {
+      document.getElementById('loginHistoryModal').classList.remove('hidden');
+      renderLoginHistoryTable();
+    }
+
+    function closeLoginHistoryModal() {
+      document.getElementById('loginHistoryModal').classList.add('hidden');
+    }
+
+    function renderLoginHistoryTable() {
+      const filterStatus = document.getElementById('filterLoginStatus').value;
+      const searchTxt = document.getElementById('searchLoginInput').value.trim().toLowerCase();
+      const tbody = document.getElementById('loginHistoryTableBody');
+      tbody.innerHTML = '';
+
+      const today = new Date();
+      let loggedTodayCount = 0;
+
+      // Đếm sơ bộ
+      UNIT_DEFINITIONS.forEach(u => {
+        const item = loginHistoryMap[u.code];
+        if (item && item.lastLoginTime && matchDateInTimeString(item.lastLoginTime, today)) {
+          loggedTodayCount++;
+        }
+      });
+
+      document.getElementById('cntLoggedToday').innerText = `${loggedTodayCount} / 52`;
+      document.getElementById('cntNotLoggedToday').innerText = `${52 - loggedTodayCount} / 52`;
+      
+      const totalLogins = Object.values(loginHistoryMap).reduce((s, d) => s + (d.count || 0), 0);
+      document.getElementById('cntTotalLogins').innerText = `${totalLogins.toLocaleString('vi-VN')} lượt`;
+      updateLoginHeaderBadge();
+
+      // Danh sách đơn vị hiển thị (nếu là Chuyên quản thì chỉ xem các tỉnh mình phụ trách)
+      let unitsList = UNIT_DEFINITIONS;
+      if (currentUser && currentUser.role === 'OFFICER') {
+        const assignedSet = new Set(currentUser.assignedUnits);
+        unitsList = UNIT_DEFINITIONS.filter(u => assignedSet.has(u.code));
+      }
+
+      let displayedList = unitsList.filter(u => {
+        if (searchTxt && !u.name.toLowerCase().includes(searchTxt) && !u.code.includes(searchTxt)) return false;
+
+        const item = loginHistoryMap[u.code];
+        const isLoggedToday = (item && item.lastLoginTime && matchDateInTimeString(item.lastLoginTime, today));
+
+        if (filterStatus === 'LOGGED' && !isLoggedToday) return false;
+        if (filterStatus === 'NOT_LOGGED' && isLoggedToday) return false;
+
+        return true;
+      });
+
+      if (displayedList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-slate-400 font-sans">Không tìm thấy đơn vị phù hợp với bộ lọc!</td></tr>';
+        return;
+      }
+
+      displayedList.forEach((u, idx) => {
+        const item = loginHistoryMap[u.code] || { lastLoginTime: '', device: '---', count: 0 };
+        const isLoggedToday = (item.lastLoginTime && matchDateInTimeString(item.lastLoginTime, today));
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+        tr.innerHTML = `
+          <td class="p-2 text-center text-slate-400 font-sans">${idx + 1}</td>
+          <td class="p-2 font-bold text-indigo-700 font-mono">${u.code}</td>
+          <td class="p-2 font-sans font-medium text-slate-800">${u.name}</td>
+          <td class="p-2 text-slate-600 font-sans">
+            ${item.lastLoginTime ? `<span class="font-bold text-slate-800">${item.lastLoginTime}</span>` : '<span class="text-slate-400 italic">Chưa từng đăng nhập</span>'}
+          </td>
+          <td class="p-2 text-slate-500 font-sans truncate" title="${item.device || ''}">${item.device || '---'}</td>
+          <td class="p-2 text-center font-bold text-indigo-900 font-sans">${item.count || 0}</td>
+          <td class="p-2 text-center font-sans">
+            ${isLoggedToday 
+              ? '<span class="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full"><i class="fa-solid fa-circle-check text-[9px]"></i> Đã vào</span>'
+              : '<span class="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full"><i class="fa-solid fa-clock text-[9px]"></i> Chưa vào</span>'
+            }
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Xuất file Excel báo cáo đăng nhập
+    function exportLoginHistoryExcel() {
+      const today = new Date();
+      const strToday = getDateString(today);
+
+      let unitsList = UNIT_DEFINITIONS;
+      if (currentUser && currentUser.role === 'OFFICER') {
+        const assignedSet = new Set(currentUser.assignedUnits);
+        unitsList = UNIT_DEFINITIONS.filter(u => assignedSet.has(u.code));
+      }
+
+      const exportData = unitsList.map((u, i) => {
+        const item = loginHistoryMap[u.code] || { lastLoginTime: '', device: '---', count: 0 };
+        const isLoggedToday = (item.lastLoginTime && matchDateInTimeString(item.lastLoginTime, today));
+
+        return {
+          "STT": i + 1,
+          "Mã bưu điện (Username)": u.code,
+          "Tên Bưu điện tỉnh / TP": u.name,
+          "Trạng thái đăng nhập hôm nay": isLoggedToday ? "ĐÃ VÀO LÀM VIỆC" : "CHƯA VÀO HỆ THỐNG",
+          "Thời gian đăng nhập gần nhất": item.lastLoginTime || "Chưa có",
+          "Thiết bị / Trình duyệt truy cập": item.device || "---",
+          "Tổng số lượt đăng nhập ghi nhận": item.count || 0
+        };
+      });
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Nhat_Ky_Dang_Nhap_52_Don_Vi");
+      XLSX.writeFile(wb, `Nhat_Ky_Dang_Nhap_Don_Vi_${strToday.replace(/\//g, '-')}.xlsx`);
+      showToast("Đã xuất báo cáo lịch sử đăng nhập thành công!", "success", "Xuất Excel");
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       initOfficers();
+      initLoginHistory();
       getStoredAccounts();
       getStoredOfficerAccounts();
       initFirebase();
     });
   </script>
+
+  <!-- ==================== MODAL LỊCH SỬ ĐĂNG NHẬP 52 ĐƠN VỊ (CHO TCT & CQTCT) ==================== -->
+  <div id="loginHistoryModal" class="hidden fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-3">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full p-5 border border-slate-200 max-h-[92vh] flex flex-col">
+      <!-- Modal Header -->
+      <div class="flex justify-between items-center pb-3 border-b border-slate-200">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-800 flex items-center justify-center text-lg font-black shadow-sm">
+            <i class="fa-solid fa-users-viewfinder"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-slate-800">NHẬT KÝ & LỊCH SỬ ĐĂNG NHẬP CỦA 52 ĐƠN VỊ</h3>
+            <p class="text-[11px] text-slate-500">Giám sát chuyên cần: Kiểm tra đơn vị nào đã vào hệ thống làm việc hôm nay, đơn vị nào chưa vào</p>
+          </div>
+        </div>
+        <button onclick="closeLoginHistoryModal()" class="text-slate-400 hover:text-slate-600 text-xl"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Thẻ Thống kê nhanh hôm nay -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 my-3">
+        <div class="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-bold text-emerald-900 uppercase block">Đã vào làm việc hôm nay</span>
+            <div id="cntLoggedToday" class="text-xl font-black text-emerald-700">0 / 52</div>
+          </div>
+          <i class="fa-solid fa-circle-check text-emerald-500 text-2xl"></i>
+        </div>
+
+        <div class="bg-rose-50 p-2.5 rounded-xl border border-rose-200 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-bold text-rose-900 uppercase block">Chưa vào làm việc hôm nay</span>
+            <div id="cntNotLoggedToday" class="text-xl font-black text-rose-700">52 / 52</div>
+          </div>
+          <i class="fa-solid fa-circle-exclamation text-rose-500 text-2xl"></i>
+        </div>
+
+        <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-bold text-slate-700 uppercase block">Tổng lượt truy cập ghi nhận</span>
+            <div id="cntTotalLogins" class="text-xl font-black text-indigo-700">0 lượt</div>
+          </div>
+          <i class="fa-solid fa-chart-line text-indigo-500 text-2xl"></i>
+        </div>
+      </div>
+
+      <!-- Thanh công cụ lọc & xuất Excel -->
+      <div class="flex flex-col sm:flex-row justify-between items-center gap-2 pb-2">
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <select id="filterLoginStatus" onchange="renderLoginHistoryTable()" class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 font-bold text-slate-700">
+            <option value="ALL">-- Tất cả 52 Đơn vị --</option>
+            <option value="LOGGED">✓ Đã vào hôm nay</option>
+            <option value="NOT_LOGGED">⚠ Chưa vào hôm nay</option>
+          </select>
+          <input type="text" id="searchLoginInput" oninput="renderLoginHistoryTable()" placeholder="Tìm theo mã hoặc tên tỉnh..." class="text-xs p-1.5 bg-slate-50 border border-slate-300 rounded-lg w-56">
+        </div>
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button onclick="exportLoginHistoryExcel()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-lg shadow flex items-center gap-1.5">
+            <i class="fa-solid fa-file-excel"></i> Xuất Báo Cáo Nhật Ký (Excel)
+          </button>
+        </div>
+      </div>
+
+      <!-- Bảng danh sách chi tiết -->
+      <div class="overflow-y-auto custom-scroll flex-1 border border-slate-200 rounded-lg max-h-[380px]">
+        <table class="w-full text-xs text-left border-collapse table-fixed">
+          <colgroup>
+            <col style="width: 40px;">
+            <col style="width: 90px;">
+            <col style="width: 25%;">
+            <col style="width: 18%;">
+            <col style="width: 18%;">
+            <col style="width: 10%;">
+            <col style="width: 15%;">
+          </colgroup>
+          <thead class="bg-slate-100 sticky top-0 border-b border-slate-200 text-slate-700 font-semibold text-[11px]">
+            <tr>
+              <th class="p-2 text-center">STT</th>
+              <th class="p-2">Mã bưu điện</th>
+              <th class="p-2">Tên Bưu điện tỉnh / TP</th>
+              <th class="p-2">Lần đăng nhập gần nhất</th>
+              <th class="p-2">Thiết bị / Trình duyệt</th>
+              <th class="p-2 text-center">Số lượt</th>
+              <th class="p-2 text-center">Tình trạng hôm nay</th>
+            </tr>
+          </thead>
+          <tbody id="loginHistoryTableBody" class="divide-y divide-slate-100 font-mono text-[11px]"></tbody>
+        </table>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="mt-3 pt-2.5 border-t border-slate-200 flex justify-end">
+        <button onclick="closeLoginHistoryModal()" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold">Đóng</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
